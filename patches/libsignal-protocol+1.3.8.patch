@@ -1,0 +1,27 @@
+diff --git a/node_modules/libsignal-protocol/dist/libsignal-protocol.js b/node_modules/libsignal-protocol/dist/libsignal-protocol.js
+index 75577f3..3a4997b 100644
+--- a/node_modules/libsignal-protocol/dist/libsignal-protocol.js
++++ b/node_modules/libsignal-protocol/dist/libsignal-protocol.js
+@@ -33,7 +33,12 @@ for (var key in Module) {
+ 
+ // The environment setup code below is customized to use Module.
+ // *** Environment setup code ***
+-var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
++// var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
++var ENVIRONMENT_IS_NODE = !!(
++  typeof process !== "undefined" &&
++  process.versions &&
++  process.versions.node
++);
+ var ENVIRONMENT_IS_WEB = typeof window === 'object';
+ var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
+ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
+@@ -29848,7 +29853,7 @@ Curve25519Worker.prototype = {
+             return loadByteBuffer(Long);
+         })();
+     /* AMD */ else if (typeof define === 'function' && define["amd"])
+-        define("ByteBuffer", ["Long"], function(Long) { return loadByteBuffer(Long); });
++        define("ByteBuffer", ["long"], function(Long) { return loadByteBuffer(Long); });
+     /* Global */ else
+         (global["dcodeIO"] = global["dcodeIO"] || {})["ByteBuffer"] = loadByteBuffer(global["dcodeIO"]["Long"]);
+ 
