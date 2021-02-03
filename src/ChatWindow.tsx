@@ -1,103 +1,219 @@
-import React, { useReducer, useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import styled from "styled-components";
 import {
-  gql,
-  OnSubscriptionDataOptions,
-  useSubscription,
-} from "@apollo/client";
-import { useSignal } from "./ChatProvider";
-import { MessageInput } from "./MessageInput";
-import { ChatMessage, ChatMessageComponent } from "./ChatMessage";
+  ActionButton,
+  Button,
+  ForwardIcon,
+  Row,
+  TextInput,
+} from "@serotonin/components";
+import { ChatMessage, ChatMessageTypes } from "./services/ChatService";
 
-const MESSAGES_SUBSCRIPTION = gql`
-  subscription OnMessageAdded($sender: String!) {
-    signalMessages(sender: $sender) {
-      ciphertext {
-        body
-        type
-        registrationId
-      }
-    }
+type TypeStyle = {
+  backgroundColor: string;
+};
+const TypeStyles: {
+  [type in ChatMessageTypes]: any;
+} = {
+  incoming: {
+    borderRadius: "6px",
+    padding: "8px",
+    margin: "8px 8px 8px 45px",
+    backgroundColor: "#EFEEF2",
+    textAlign: "right",
+  },
+  outgoing: {
+    borderRadius: "6px",
+    padding: "8px",
+    margin: "8px 45px 8px 8px",
+    backgroundColor: "#F6E6E7",
+    textAlign: "left",
+  },
+  event: {
+    fontSize: "smaller",
+    color: "#aaa",
+    padding: "8px",
+    margin: "8px 18px 8px 18px",
+    backgroundColor: "white",
+    textAlign: "center",
+  },
+};
+
+const MessageContainer = styled.div<{ type: ChatMessageTypes }>(
+  (props) => TypeStyles[props.type]
+);
+const MessagesContainer = styled.div``;
+
+const WindowContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  max-width: 280px;
+  ${MessagesContainer} {
+    flex-grow: 1;
   }
 `;
 
-export interface ReducerState {
-  messages: ChatMessage[];
-}
-type NewMessageAction = {
-  type: "new-message";
-  message: ChatMessage;
-};
+const NewMessages = styled(Button)<{ visible: boolean }>`
+  visibility: ${(props) => (props.visible ? "visible" : "hidden")};
+  background-color: rgb(0, 0, 0, 0.75);
+  color: white;
+  text-align: center;
+  position: relative;
+  top: 400px;
+  width: 100%;
+`;
 
-type Actions = NewMessageAction;
-function reducer(state: ReducerState, action: Actions): ReducerState {
-  switch (action.type) {
-    case "new-message":
-      return { ...state, messages: state.messages.concat(action.message) };
-    default:
-      return state;
+const MessagesViewport = styled.div`
+  min-height: 400px;
+  max-height: 400px;
+  overflow-y: scroll;
+  ::-webkit-scrollbar {
+    width: 10px;
   }
-}
 
-const initialState: ReducerState = { messages: [] };
+  ::-webkit-scrollbar-track {
+    background: white;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #ccc;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #888;
+  }
+`;
+
+const MessageInputContainer = styled(Row)`
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: row;
+  > *:first-child {
+    flex-grow: 1;
+    height: 100%;
+  }
+  > *:nth-child(2) {
+    margin: 8px;
+  }
+`;
+const MessageInputComponent = styled(TextInput)`
+  border: none;
+  margin-top: 0px;
+  > label {
+    margin-bottom: 0px;
+  }
+  > input {
+    border: none;
+  }
+`;
 
 export interface ChatWindowProps {
-  myEthAccount: string;
-  counterPartyEthAccount: string;
+  topElement?: React.ReactElement;
+  messages: ChatMessage[];
+  onSend(content: string): Promise<void>;
 }
 export const ChatWindow: React.FC<ChatWindowProps> = ({
-  myEthAccount,
-  counterPartyEthAccount,
+  topElement,
+  messages,
+  onSend,
 }) => {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const { signal } = useSignal();
-  const onSubscriptionData = useCallback(
-    async (opts: OnSubscriptionDataOptions<any>) => {
-      console.log("got data", opts);
-      let ciphertext = opts.subscriptionData.data.signalMessages.ciphertext;
-      let plaintext = "";
-
-      console.log("decrypting ciphertext", ciphertext);
-      plaintext = await signal.decrypt(counterPartyEthAccount, 0, ciphertext);
-
-      dispatch({
-        type: "new-message",
-        message: {
-          direction: "receive",
-          plaintext,
-        },
-      });
-    },
-    [signal]
-  );
-  const { error, loading, data } = useSubscription(MESSAGES_SUBSCRIPTION, {
-    variables: { sender: counterPartyEthAccount },
-    shouldResubscribe: true,
-    onSubscriptionData,
-  });
-  if (error) {
-    return <div>error: {JSON.stringify(error)}</div>;
-  }
-  console.log("chat window render", data);
   return (
-    <div>
-      <h3>Chat</h3>
-
-      {state.messages.map((m, idx) => {
-        return <ChatMessageComponent key={idx} message={m} />;
-      })}
-      <MessageInput
-        recipientUserId={counterPartyEthAccount}
-        onMessageSend={(plaintext) =>
-          dispatch({
-            type: "new-message",
-            message: {
-              direction: "send",
-              plaintext,
-            },
-          })
-        }
-      />
-    </div>
+    <WindowContainer>
+      <Messsages messages={messages}></Messsages>
+      <MessageInput onSend={onSend} />
+    </WindowContainer>
   );
-  // return <h4>New comment: {!loading && JSON.stringify(data)}</h4>;
+};
+
+const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
+  return (
+    <MessageContainer type={message.type}>{message.content}</MessageContainer>
+  );
+};
+
+const Messsages: React.FC<{ messages: ChatMessage[] }> = ({ messages }) => {
+  const divRef = useRef<HTMLDivElement>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [showNewButton, setShowNewButton] = useState(false);
+  const scrollToBottom = useCallback(() => {
+    if (divRef && divRef.current) {
+      divRef.current.scrollTo(0, divRef.current.scrollHeight);
+      if (showNewButton) {
+        setShowNewButton(false);
+      }
+    }
+  }, [divRef]);
+
+  const onScroll = useCallback((e) => {
+    const elem = e.target;
+
+    if (elem.scrollHeight - elem.scrollTop == elem.clientHeight) {
+      setShowNewButton(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let listener: any;
+    if (divRef && divRef.current) {
+      listener = divRef.current.addEventListener("scroll", onScroll);
+    }
+    scrollToBottom();
+    return () => {
+      if (divRef.current) {
+        divRef.current?.removeEventListener("scroll", listener);
+      }
+    };
+  }, [divRef]);
+
+  useEffect(() => {
+    if (divRef && divRef.current) {
+      const elem = divRef.current;
+      const scrollHeight = elem.scrollHeight;
+
+      if (elem.scrollHeight - elem.scrollTop == elem.clientHeight) {
+        if (showNewButton === true) {
+          setShowNewButton(false);
+        }
+      } else if (showNewButton === false) {
+        setShowNewButton(true);
+      }
+    }
+  }, [messages]);
+  return (
+    <MessagesContainer>
+      <NewMessages onClick={scrollToBottom} visible={showNewButton}>
+        New Messages
+      </NewMessages>
+      <MessagesViewport ref={divRef}>
+        {messages.map((message) => (
+          <Message message={message} />
+        ))}
+      </MessagesViewport>
+    </MessagesContainer>
+  );
+};
+
+const MessageInput: React.FC<{ onSend(content: string): Promise<void> }> = ({
+  onSend,
+}) => {
+  const inputRef = useRef<HTMLInputElement>();
+  const [saving, setSaving] = useState(false);
+  const send = useCallback(async () => {
+    setSaving(true);
+    const content = inputRef.current!.value;
+    await onSend(content);
+    inputRef.current!.value = "";
+    setSaving(false);
+  }, [onSend, inputRef]);
+  return (
+    <MessageInputContainer>
+      <MessageInputComponent
+        name="message"
+        placeholder="Type your message"
+        inputRef={inputRef}
+        disabled={saving}
+      />
+      <ActionButton icon={ForwardIcon} onClick={send} />
+    </MessageInputContainer>
+  );
 };

@@ -2,7 +2,7 @@ import React from "react";
 import { Story, Meta } from "@storybook/react";
 
 import { Chat, ChatProps } from "../Chat";
-import { ChatWindow } from "../ChatWindow";
+import { ChatManager } from "../ChatManager";
 import { ChatProvider } from "../ChatProvider";
 
 const graphqlUri = "http://localhost:8080/query";
@@ -17,7 +17,7 @@ const Template: Story<ChatProps> = (args) => {
     <ChatProvider authToken={args.myEthAccount} graphqlUri={graphqlUri}>
       <div>
         <Chat {...args} />
-        <ChatWindow {...args} />
+        <ChatManager {...args} />
       </div>
     </ChatProvider>
   );
