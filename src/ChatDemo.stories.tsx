@@ -1,16 +1,10 @@
 import { Meta } from "@storybook/react";
 import styled from "styled-components";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import faker from "faker";
-import { ChatWindow as ChatWindowComponent } from "./ChatWindow";
+import { useEffect, useMemo, useState } from "react";
 
 import { ChatManager, ManagedChatWindow } from "./ChatManager";
 import { DemoChatService } from "./services/DemoChatService";
-import {
-  ChatService,
-  OutgoingMessage,
-  IncomingMessage,
-} from "./services/ChatService";
+import { ChatService } from "./services/ChatService";
 
 export default {
   title: "Chat/Demo",
@@ -33,15 +27,25 @@ const Container = styled.div`
 type devices = "alice1" | "bob1" | "carol1" | "alice2";
 type Services = { [key in devices]: ChatService };
 export const Demo = () => {
-  const services = useMemo<Services>(
-    () => ({
-      alice1: new DemoChatService("alice", "1"),
-      bob1: new DemoChatService("bob", "1"),
-      carol1: new DemoChatService("carol", "1"),
-      alice2: new DemoChatService("alice", "2"),
-    }),
-    []
-  );
+  const [initialized, setInitialized] = useState(false);
+  const [services, setServices] = useState<Services>();
+
+  useEffect(() => {
+    async function init() {
+      setServices({
+        alice1: await DemoChatService.build("alice", "1"),
+        bob1: await DemoChatService.build("bob", "1"),
+        carol1: await DemoChatService.build("carol", "1"),
+        alice2: await DemoChatService.build("alice", "2"),
+      });
+      setInitialized(true);
+    }
+    init();
+  }, []);
+
+  if (!initialized) {
+    return <div>loading...</div>;
+  }
 
   return (
     <Container>

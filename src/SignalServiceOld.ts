@@ -21,7 +21,7 @@ export interface SignalState {
   registrationId?: number;
 }
 
-export class SignalService {
+export class SignalServiceOld {
   private lib!: SignalLibrary;
   private store!: SignalGraphqlStore;
   private state: SignalState;

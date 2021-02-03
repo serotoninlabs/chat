@@ -64,6 +64,10 @@ export const ManagedChatWindow: React.FC<{ conversationId: string }> = ({
   );
 
   return (
-    <ChatWindow messages={(state && state.messages) || []} onSend={onSend} />
+    <ChatWindow
+      currentUser={service.getAddress().userId}
+      messages={(state && state.messages) || []}
+      onSend={onSend}
+    />
   );
 };

@@ -17,7 +17,7 @@ import { getMainDefinition } from "@apollo/client/utilities";
 import { setContext } from "@apollo/client/link/context";
 import { WebSocketLink } from "@apollo/client/link/ws";
 
-import { SignalService, SignalState } from "./SignalService";
+import { SignalService, SignalState } from "./SignalServiceOld";
 
 export interface ChatContextType {
   signal: SignalService;

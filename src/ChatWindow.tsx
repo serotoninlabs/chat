@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
+  SmallText,
   ActionButton,
   Button,
   ForwardIcon,
   Row,
   TextInput,
 } from "@serotonin/components";
-import { ChatMessage, ChatMessageTypes } from "./services/ChatService";
+import { ChatMessage } from "./services/ChatService";
+
+type ChatMessageTypes = "incoming" | "outgoing" | "event";
 
 type TypeStyle = {
   backgroundColor: string;
@@ -109,29 +112,47 @@ const MessageInputComponent = styled(TextInput)`
 
 export interface ChatWindowProps {
   topElement?: React.ReactElement;
+  currentUser: string;
   messages: ChatMessage[];
   onSend(content: string): Promise<void>;
 }
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   topElement,
+  currentUser,
   messages,
   onSend,
 }) => {
   return (
     <WindowContainer>
-      <Messsages messages={messages}></Messsages>
+      <Messsages currentUser={currentUser} messages={messages}></Messsages>
       <MessageInput onSend={onSend} />
     </WindowContainer>
   );
 };
 
-const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
+const Message: React.FC<{ currentUser: string; message: ChatMessage }> = ({
+  currentUser,
+  message,
+}) => {
+  const senderUser = message.sender.split(".")[0];
+  const type: ChatMessageTypes =
+    senderUser === currentUser ? "outgoing" : "incoming";
+
+  console.log("xx", type, currentUser, message);
   return (
-    <MessageContainer type={message.type}>{message.content}</MessageContainer>
+    <MessageContainer type={type}>
+      <div>
+        <SmallText>{senderUser}</SmallText>
+      </div>
+      <div>{message.content}</div>
+    </MessageContainer>
   );
 };
 
-const Messsages: React.FC<{ messages: ChatMessage[] }> = ({ messages }) => {
+const Messsages: React.FC<{ currentUser: string; messages: ChatMessage[] }> = ({
+  currentUser,
+  messages,
+}) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [initialized, setInitialized] = useState(false);
   const [showNewButton, setShowNewButton] = useState(false);
@@ -186,7 +207,11 @@ const Messsages: React.FC<{ messages: ChatMessage[] }> = ({ messages }) => {
       </NewMessages>
       <MessagesViewport ref={divRef}>
         {messages.map((message) => (
-          <Message message={message} />
+          <Message
+            key={message.messageId}
+            currentUser={currentUser}
+            message={message}
+          />
         ))}
       </MessagesViewport>
     </MessagesContainer>

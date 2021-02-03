@@ -1,6 +1,10 @@
 export abstract class StatefulService<State> {
   private cb?: (state: State) => void;
-  protected state!: State;
+  protected state: State;
+
+  constructor(initialState: State) {
+    this.state = initialState;
+  }
 
   public async onStateChange(cb: (state: State) => void) {
     this.cb = cb;
@@ -15,6 +19,7 @@ export abstract class StatefulService<State> {
     if (this.cb) {
       this.cb(state);
     }
+    console.log("called set state", this.state);
   }
 
   protected updateState(patch: Partial<State>) {

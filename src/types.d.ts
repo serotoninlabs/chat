@@ -10,9 +10,9 @@ export type SerializedPreKey = { keyId: number; keyPair: SerializedKeyPair };
 export type SerializedSignedPreKey = SerializedPreKey & { signature: string };
 
 export interface SignalProtocolAddress {
-  new (name: string, deviceId: number);
+  new (name: string, deviceId: string | number);
   getName(): string;
-  getDeviceId(): number;
+  getDeviceId(): string | number;
   toString(): string;
   equals(address: SignalProtocolAddress): boolean;
   fromString(encodedAddress: string): SignalProtocolAddress;
@@ -52,20 +52,29 @@ export interface PreKeyBundle {
     publicKey: ArrayBuffer;
   };
 }
+export type EncryptedMessage = {
+  type: number;
+  body: string;
+  registrationId: string;
+};
 export interface SessionBuilder {
-  new (store: any, address: SignalProtocolAddress);
+  new (store: any, address: SignalProtocolAddress): SessionBuilder;
   processPreKey(device: PreKeyBundle): Promise<void>;
 }
 export interface SessionCipher {
-  new (store: any, address: SignalProtocolAddress);
+  new (store: any, address: SignalProtocolAddress): SessionCipher;
   encrypt(
     plaintext: string | ArrayBuffer,
     encoding?: "base64" | "hex" | "binary" | "utf8"
-  ): Promise<{ type: number; body: string; registrationId: string }>;
-  decryptPreKeyWhisperMessage(ciphertext: {
-    type: number;
-    body: string;
-  }): ArrayBuffer;
+  ): Promise<EncryptedMessage>;
+  decryptPreKeyWhisperMessage(
+    buffer: string | ArrayBuffer,
+    encoding?: "base64" | "hex" | "binary" | "utf8"
+  ): Promise<ArrayBuffer>;
+  decryptWhisperMessage(
+    buffer: string | ArrayBuffer,
+    encoding?: "base64" | "hex" | "binary" | "utf8"
+  ): Promise<ArrayBuffer>;
 }
 export interface SessionRecord {}
 export interface SignalLibrary {

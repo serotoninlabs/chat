@@ -99,7 +99,6 @@ export class SignalGraphqlStore {
 
   public async saveIdentity(
     identifier: string,
-    deviceId: number,
     identityKey: ArrayBuffer
   ): Promise<boolean> {
     console.log("saveIdentity", identifier, identityKey);
