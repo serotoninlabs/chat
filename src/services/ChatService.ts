@@ -94,7 +94,6 @@ export class ChatService extends StatefulService<ChatState> {
     const participants = await this.remote.getConversationParticipants(
       conversationId
     );
-    await this.storage.storeMessage(message);
 
     for (const recipient of participants) {
       if (recipient.toIdentifier() !== this.address.toIdentifier()) {
@@ -106,6 +105,7 @@ export class ChatService extends StatefulService<ChatState> {
         await this.remote.send(recipient, ciphertext);
       }
     }
+    await this.storage.storeMessage(message);
   }
 
   public getAddress(): Address {

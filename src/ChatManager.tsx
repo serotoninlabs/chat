@@ -4,7 +4,6 @@ import { useConversation } from "./hooks/useConversation";
 import { ChatService, ChatState } from "./services/ChatService";
 
 export interface Manager {
-  state: ChatState;
   service: ChatService;
 }
 
@@ -16,19 +15,8 @@ export const ChatManager: React.FC<{ service: ChatService }> = ({
   children,
   service,
 }) => {
-  const [manager, setManager] = useState<Manager>({
-    service,
-    state: service.getState(),
-  });
-  useEffect(() => {
-    service.onStateChange((state) => setManager({ service, state }));
-    return () => {
-      // TODO unsubscribe
-    };
-  }, [service]);
-
   return (
-    <ChatManagerContext.Provider value={manager}>
+    <ChatManagerContext.Provider value={{ service }}>
       {children}
     </ChatManagerContext.Provider>
   );
