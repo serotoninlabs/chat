@@ -1,6 +1,6 @@
 import { Address } from "./ChatService";
 import { StatefulService } from "./StatefulService";
-import { StorageService } from "./StorageService";
+import { SignalStorage } from "./SignalStorage";
 import { RemoteService } from "./RemoteService";
 import ByteBuffer from "bytebuffer";
 
@@ -37,7 +37,7 @@ export type SignalState =
   | { initialized: false };
 
 export class SignalService extends StatefulService<SignalState> {
-  private storage: StorageService;
+  private storage: SignalStorage;
   private remote: RemoteService;
   private address: Address;
   private lib!: SignalLibrary;
@@ -51,20 +51,16 @@ export class SignalService extends StatefulService<SignalState> {
   };
 
   static async build(
-    storage: StorageService,
     remote: RemoteService,
     address: Address
   ): Promise<SignalService> {
+    const storage = await SignalStorage.build(address);
     const service = new SignalService(storage, remote, address);
     await service.initialize();
     return service;
   }
 
-  constructor(
-    storage: StorageService,
-    remote: RemoteService,
-    address: Address
-  ) {
+  constructor(storage: SignalStorage, remote: RemoteService, address: Address) {
     super({ initialized: false });
     this.storage = storage;
     this.remote = remote;
@@ -125,8 +121,6 @@ export class SignalService extends StatefulService<SignalState> {
       ];
     }
   }
-
-  private onRemoteMessageReceived() {}
 
   // this is not part of the signal.storage interface so we can change this
   public async startSession(address: Address): Promise<void> {

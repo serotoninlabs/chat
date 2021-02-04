@@ -2,6 +2,7 @@ import { openDB, DBSchema, IDBPDatabase } from "idb";
 import { KeyPair, SerializedKeyPair, SerializedSignedPreKey } from "../types";
 import { deserializeKeyPair, serializeKey, serializeKeyPair } from "../utils";
 import { Address } from "./ChatService";
+import { StorageFactory } from "./StorageFactory";
 
 interface StorageSchema extends DBSchema {
   registrationId: {
@@ -26,36 +27,31 @@ interface StorageSchema extends DBSchema {
   };
 }
 
-export class StorageService {
-  private initialized = false;
-  private address: Address;
-  private db!: IDBPDatabase<StorageSchema>;
+export class SignalStorage extends StorageFactory<StorageSchema> {
+  public version = 1;
+  public namespace = "superduper.so";
+  public databaseName: string;
+  public migrations = {
+    1(db: IDBPDatabase<StorageSchema>) {
+      console.log("calling upgrade");
+      db.createObjectStore("identityKeyPair");
+      db.createObjectStore("privatePreKeys");
+      db.createObjectStore("signedPreKeys");
+      db.createObjectStore("sessions");
+      db.createObjectStore("registrationId");
+    },
+  };
 
   constructor(address: Address) {
-    this.address = address;
+    super();
+    this.databaseName = "signal-" + address.toIdentifier();
   }
 
-  static async build(address: Address): Promise<StorageService> {
-    const service = new StorageService(address);
-    await service.init();
+  static async build(address: Address): Promise<SignalStorage> {
+    const service = new SignalStorage(address);
+    await service.initialize();
 
     return service;
-  }
-
-  public async init(): Promise<void> {
-    const name = "chat-" + this.address.toIdentifier();
-    const version = 1;
-    this.db = await openDB<StorageSchema>(name, version, {
-      upgrade(db) {
-        console.log("calling upgrade");
-        db.createObjectStore("identityKeyPair");
-        db.createObjectStore("privatePreKeys");
-        db.createObjectStore("signedPreKeys");
-        db.createObjectStore("sessions");
-        db.createObjectStore("registrationId");
-        // that.signal.createIndex("by-price", "price");
-      },
-    });
   }
 
   public async storeIdentityKeyPair(keypair: KeyPair): Promise<void> {

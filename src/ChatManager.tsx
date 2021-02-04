@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ChatWindow } from "./ChatWindow";
+import { useConversation } from "./hooks/useConversation";
 import {
   ChatService,
   ChatState,
@@ -14,7 +15,7 @@ export interface Manager {
 
 const defaultContext = { messages: [], async onSend(content: string) {} };
 // @ts-ignore ignore setting undefined
-const ChatManagerContext = React.createContext<Manager>();
+export const ChatManagerContext = React.createContext<Manager>();
 
 export const ChatManager: React.FC<{ service: ChatService }> = ({
   children,
@@ -41,33 +42,13 @@ export const ChatManager: React.FC<{ service: ChatService }> = ({
 export const ManagedChatWindow: React.FC<{ conversationId: string }> = ({
   conversationId,
 }) => {
-  const { service } = React.useContext(ChatManagerContext);
-  const [conversation, setConversation] = useState<Conversation>();
-  const [state, setState] = useState<ConversationState>();
-  useEffect(() => {
-    service.startConversation(conversationId).then(setConversation);
-  }, [service, conversationId]);
-  useEffect(() => {
-    if (conversation) {
-      conversation.onStateChange(setState);
-    }
-  }, [conversation]);
-
-  const onSend = useCallback(
-    async (content: string) => {
-      if (!conversation) {
-        throw new Error("invalid state - conversation undefined");
-      }
-      conversation.send(content);
-    },
-    [conversation]
-  );
+  const { messages, send, address } = useConversation(conversationId);
 
   return (
     <ChatWindow
-      currentUser={service.getAddress().userId}
-      messages={(state && state.messages) || []}
-      onSend={onSend}
+      currentUser={address.userId}
+      messages={messages}
+      onSend={(content) => send(conversationId, content)}
     />
   );
 };
