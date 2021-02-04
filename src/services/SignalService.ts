@@ -22,6 +22,7 @@ import {
   serializeKeyPair,
 } from "../utils";
 import { ethers } from "ethers";
+import { SecureMessage } from "./SecureMessage";
 
 export type EncryptedSession = {
   address: Address;
@@ -42,7 +43,7 @@ export class SignalService extends StatefulService<SignalState> {
   private address: Address;
   private lib!: SignalLibrary;
   private decryptedMessageCallbacks: Array<
-    (sender: Address, message: string) => void
+    (sender: Address, message: SecureMessage) => void
   > = [];
 
   public Direction = {
@@ -103,12 +104,12 @@ export class SignalService extends StatefulService<SignalState> {
   public async teardown() {}
 
   public async decryptedMessageSubscribe(
-    cb: (sender: Address, plaintext: string) => void
+    cb: (sender: Address, message: SecureMessage) => void
   ) {
     this.decryptedMessageCallbacks.push(cb);
   }
   public async decryptedMessageUnsubscribe(
-    cb: (sender: Address, plaintext: string) => void
+    cb: (sender: Address, payload: SecureMessage) => void
   ) {
     const idx = this.decryptedMessageCallbacks.indexOf(cb);
     if (idx >= 0) {
@@ -135,9 +136,10 @@ export class SignalService extends StatefulService<SignalState> {
 
   public async encrypt(
     recipient: Address,
-    plaintext: string
+    message: SecureMessage
   ): Promise<EncryptedMessage> {
-    const ab = ByteBuffer.wrap(plaintext, "binary").toArrayBuffer();
+    const plaintext = JSON.stringify(message);
+    const ab = ByteBuffer.wrap(plaintext, "utf8").toArrayBuffer();
     const session = await this.storage.getSession(recipient.toIdentifier());
     if (!session) {
       console.log(
@@ -157,7 +159,7 @@ export class SignalService extends StatefulService<SignalState> {
   public async decrypt(
     sender: Address,
     ciphertext: EncryptedMessage
-  ): Promise<string> {
+  ): Promise<SecureMessage> {
     const signalAddress = new this.lib.SignalProtocolAddress(
       sender.userId,
       sender.deviceId
@@ -192,7 +194,7 @@ export class SignalService extends StatefulService<SignalState> {
       );
       plaintext = ByteBuffer.wrap(result, "binary").toUTF8();
     }
-    return plaintext;
+    return JSON.parse(plaintext);
   }
 
   // this is not part of the signal.storage interface so we can change this

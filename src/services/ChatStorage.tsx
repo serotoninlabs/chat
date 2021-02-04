@@ -35,7 +35,11 @@ export class ChatStorage extends StorageFactory<ChatStorageSchema> {
   public async getAllFromConversation(
     conversationId: string
   ): Promise<MessageWrapper[]> {
-    return this.db.getAllFromIndex("messages", "conversation", conversationId);
+    const idx = IDBKeyRange.bound(
+      [conversationId, new Date(0)],
+      [conversationId, new Date()]
+    );
+    return this.db.getAllFromIndex("messages", "date", idx);
   }
 
   public async storeMessage(message: ChatMessage): Promise<void> {

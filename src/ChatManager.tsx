@@ -1,12 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ChatWindow } from "./ChatWindow";
 import { useConversation } from "./hooks/useConversation";
-import {
-  ChatService,
-  ChatState,
-  Conversation,
-  ConversationState,
-} from "./services/ChatService";
+import { ChatService, ChatState } from "./services/ChatService";
 
 export interface Manager {
   state: ChatState;

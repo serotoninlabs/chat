@@ -102,7 +102,7 @@ const Messsages: React.FC<{ currentUser: string; messages: ChatMessage[] }> = ({
   messages,
 }) => {
   const divRef = useRef<HTMLDivElement>(null);
-  const [initialized, setInitialized] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
   const [showNewButton, setShowNewButton] = useState(false);
   const scrollToBottom = useCallback(() => {
     if (divRef && divRef.current) {
@@ -116,8 +116,13 @@ const Messsages: React.FC<{ currentUser: string; messages: ChatMessage[] }> = ({
   const onScroll = useCallback((e) => {
     const elem = e.target;
 
+    // at the bottom
     if (elem.scrollHeight - elem.scrollTop == elem.clientHeight) {
       setShowNewButton(false);
+      setHasScrolled(false);
+    } else {
+      // not at the bottom
+      setHasScrolled(true);
     }
   }, []);
 
@@ -145,6 +150,9 @@ const Messsages: React.FC<{ currentUser: string; messages: ChatMessage[] }> = ({
         }
       } else if (showNewButton === false) {
         setShowNewButton(true);
+      }
+      if (!hasScrolled) {
+        scrollToBottom();
       }
     }
   }, [messages]);
