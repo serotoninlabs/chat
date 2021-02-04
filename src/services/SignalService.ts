@@ -41,6 +41,9 @@ export class SignalService extends StatefulService<SignalState> {
   private remote: RemoteService;
   private address: Address;
   private lib!: SignalLibrary;
+  private decryptedMessageCallbacks: Array<
+    (sender: Address, message: string) => void
+  > = [];
 
   public Direction = {
     SENDING: 1,
@@ -79,39 +82,82 @@ export class SignalService extends StatefulService<SignalState> {
     }
 
     this.setState({ initialized: true, identityKeypair });
+
+    this.remote.subscribe((sender, message) =>
+      this.onRemoteMessage(sender, message)
+    );
   }
 
+  public async onRemoteMessage(
+    sender: Address,
+    message: EncryptedMessage
+  ): Promise<void> {
+    console.log(
+      "received onRemoteMessage",
+      this.address.toIdentifier(),
+      sender,
+      message
+    );
+    const plaintext = await this.decrypt(sender, message);
+    for (const cb of this.decryptedMessageCallbacks) {
+      console.log("calling decryptedMessageCallbacks");
+      cb(sender, plaintext);
+    }
+  }
+  public async teardown() {}
+
+  public async decryptedMessageSubscribe(
+    cb: (sender: Address, plaintext: string) => void
+  ) {
+    this.decryptedMessageCallbacks.push(cb);
+  }
+  public async decryptedMessageUnsubscribe(
+    cb: (sender: Address, plaintext: string) => void
+  ) {
+    const idx = this.decryptedMessageCallbacks.indexOf(cb);
+    if (idx >= 0) {
+      this.decryptedMessageCallbacks = [
+        ...this.decryptedMessageCallbacks.slice(0, idx),
+        ...this.decryptedMessageCallbacks.slice(
+          idx,
+          this.decryptedMessageCallbacks.length
+        ),
+      ];
+    }
+  }
+
+  private onRemoteMessageReceived() {}
+
   // this is not part of the signal.storage interface so we can change this
-  public async startSession(
-    conversationId: string
-  ): Promise<EncryptedSession[]> {
-    const preKeyBundles = await this.remote.generatePreKeyBundle(
-      conversationId
+  public async startSession(address: Address): Promise<void> {
+    const preKeyBundle = await this.remote.generatePreKeyBundle(address);
+    const signalAddress = new this.lib.SignalProtocolAddress(
+      address.userId,
+      address.deviceId
     );
+    const sessionBuilder = new this.lib.SessionBuilder(this, signalAddress);
+    await sessionBuilder.processPreKey(preKeyBundle);
+  }
 
-    // Instantiate a SessionBuilder for all of the user's devices
-    let sessions: EncryptedSession[] = [];
-    await Promise.all(
-      preKeyBundles.map((result) => {
-        const { address: remoteAddress, bundle } = result;
-
-        const signalAddress = new this.lib.SignalProtocolAddress(
-          remoteAddress.userId,
-          remoteAddress.deviceId
-        );
-        const sessionBuilder = new this.lib.SessionBuilder(this, signalAddress);
-
-        return sessionBuilder.processPreKey(bundle).then(() => {
-          sessions = sessions.concat([
-            {
-              address: remoteAddress,
-              cipher: new this.lib.SessionCipher(this, signalAddress),
-            },
-          ]);
-        });
-      })
+  public async encrypt(
+    recipient: Address,
+    plaintext: string
+  ): Promise<EncryptedMessage> {
+    const ab = ByteBuffer.wrap(plaintext, "binary").toArrayBuffer();
+    const session = await this.storage.getSession(recipient.toIdentifier());
+    if (!session) {
+      console.log(
+        `${this.address.toIdentifier()} starting session with ${recipient.toIdentifier()} (encrypt)`
+      );
+      await this.startSession(recipient);
+    }
+    const signalAddress = new this.lib.SignalProtocolAddress(
+      recipient.userId,
+      recipient.deviceId
     );
-    return sessions;
+    const cipher = new this.lib.SessionCipher(this, signalAddress);
+
+    return cipher.encrypt(ab);
   }
 
   public async decrypt(
@@ -122,6 +168,13 @@ export class SignalService extends StatefulService<SignalState> {
       sender.userId,
       sender.deviceId
     );
+    console.log(
+      `${this.address.toIdentifier()} starting session with ${sender.toIdentifier()} (decrypt)`
+    );
+    const session = this.storage.getSession(sender.toIdentifier());
+    if (!session) {
+      await this.startSession(sender);
+    }
     const cipher = new this.lib.SessionCipher(this, signalAddress);
 
     // Decrypt a PreKeyWhisperMessage by first establishing a new session.

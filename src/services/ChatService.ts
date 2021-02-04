@@ -1,7 +1,7 @@
 import { StatefulService } from "./StatefulService";
 import { v4 as uuid } from "uuid";
 import ByteBuffer from "bytebuffer";
-import { EncryptedSession, SignalService } from "./SignalService";
+import { EncryptedSession, SignalService, SignalState } from "./SignalService";
 import { RemoteService } from "./RemoteService";
 import { StorageService } from "./StorageService";
 import { EncryptedMessage } from "../types";
@@ -64,6 +64,12 @@ export abstract class ChatService extends StatefulService<ChatState> {
     this.storage = storage;
     this.address = address;
   }
+  public async initialize() {
+    this.signal.decryptedMessageSubscribe(
+      (sender: Address, plaintext: string) =>
+        this.onDecryptedMessage(sender, plaintext)
+    );
+  }
   abstract send(
     conversationId: string,
     recipient: Address,
@@ -78,16 +84,20 @@ export abstract class ChatService extends StatefulService<ChatState> {
   public async startConversation(
     conversationId: string
   ): Promise<Conversation> {
-    console.log(
-      "starting conversation: ",
-      conversationId,
-      this.address.toIdentifier()
-    );
     const conversation = new Conversation(this, conversationId);
     await conversation.initialize();
     this.conversations[conversationId] = conversation;
-    console.log("done", this.address.toIdentifier());
     return conversation;
+  }
+
+  public async onDecryptedMessage(
+    sender: Address,
+    plaintext: string
+  ): Promise<void> {
+    const message = JSON.parse(plaintext) as ChatMessage;
+    const conversation = this.conversations[message.conversationId];
+    conversation.receive(message);
+    console.log("got a message", sender, plaintext, conversation);
   }
 }
 
@@ -97,7 +107,7 @@ export interface ConversationState {
 export class Conversation extends StatefulService<ConversationState> {
   private service: ChatService;
   private conversationId: string;
-  private sessions!: EncryptedSession[];
+  private participants!: Address[];
 
   constructor(service: ChatService, conversationId: string) {
     super({ messages: [] });
@@ -105,7 +115,15 @@ export class Conversation extends StatefulService<ConversationState> {
     this.conversationId = conversationId;
   }
   public async initialize(): Promise<void> {
-    this.sessions = await this.service.signal.startSession(this.conversationId);
+    this.participants = await this.service.remote.getConversationParticipants(
+      this.conversationId
+    );
+    console.log(
+      "conversation initialized: ",
+      this.conversationId,
+      this.participants
+    );
+    // this.sessions = await this.service.signal.startSession(this.conversationId);
   }
   public async send(content: string): Promise<void> {
     const message: OutgoingMessage = {
@@ -118,21 +136,18 @@ export class Conversation extends StatefulService<ConversationState> {
     };
 
     const jsonMessage = JSON.stringify(message);
-    const ab = ByteBuffer.wrap(jsonMessage, "binary").toArrayBuffer();
-
-    for (const session of this.sessions) {
-      const ciphertext = await session.cipher.encrypt(ab);
-      await this.service.send(this.conversationId, session.address, ciphertext);
+    for (const recipient of this.participants) {
+      if (recipient.toIdentifier() !== this.service.address.toIdentifier()) {
+        const ciphertext = await this.service.signal.encrypt(
+          recipient,
+          jsonMessage
+        );
+        await this.service.send(this.conversationId, recipient, ciphertext);
+      }
     }
     this.updateState({ messages: this.state.messages.concat([message]) });
   }
-  public async receive(
-    sender: Address,
-    ciphertext: EncryptedMessage
-  ): Promise<void> {
-    const plaintext = await this.service.signal.decrypt(sender, ciphertext);
-    const message = JSON.parse(plaintext);
-
+  public async receive(message: ChatMessage): Promise<void> {
     this.updateState({ messages: this.state.messages.concat([message]) });
     //this.updateState({ messages: this.state.messages.concat([message]) });
   }

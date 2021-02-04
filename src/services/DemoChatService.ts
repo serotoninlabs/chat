@@ -48,6 +48,7 @@ export class DemoChatService extends ChatService {
     const remote = await DemoRemoteService.build(address);
     const signal = await SignalService.build(storage, remote, address);
     const service = new DemoChatService(signal, remote, storage, address);
+    await service.initialize();
     await coordinator.register(service);
 
     return service;
@@ -58,7 +59,8 @@ export class DemoChatService extends ChatService {
     recipient: Address,
     message: EncryptedMessage
   ) {
-    await coordinator.onSend(conversationId, this.address, recipient, message);
+    await this.remote.send(recipient, message);
+    // await coordinator.onSend(conversationId, this.address, recipient, message);
   }
   public async onReceive(
     conversationId: string,

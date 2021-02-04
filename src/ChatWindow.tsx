@@ -10,41 +10,8 @@ import {
 } from "@serotonin/components";
 import { ChatMessage } from "./services/ChatService";
 
-type ChatMessageTypes = "incoming" | "outgoing" | "event";
+import { Message } from "./ChatMessage";
 
-type TypeStyle = {
-  backgroundColor: string;
-};
-const TypeStyles: {
-  [type in ChatMessageTypes]: any;
-} = {
-  incoming: {
-    borderRadius: "6px",
-    padding: "8px",
-    margin: "8px 8px 8px 45px",
-    backgroundColor: "#EFEEF2",
-    textAlign: "right",
-  },
-  outgoing: {
-    borderRadius: "6px",
-    padding: "8px",
-    margin: "8px 45px 8px 8px",
-    backgroundColor: "#F6E6E7",
-    textAlign: "left",
-  },
-  event: {
-    fontSize: "smaller",
-    color: "#aaa",
-    padding: "8px",
-    margin: "8px 18px 8px 18px",
-    backgroundColor: "white",
-    textAlign: "center",
-  },
-};
-
-const MessageContainer = styled.div<{ type: ChatMessageTypes }>(
-  (props) => TypeStyles[props.type]
-);
 const MessagesContainer = styled.div``;
 
 const WindowContainer = styled.div`
@@ -127,25 +94,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       <Messsages currentUser={currentUser} messages={messages}></Messsages>
       <MessageInput onSend={onSend} />
     </WindowContainer>
-  );
-};
-
-const Message: React.FC<{ currentUser: string; message: ChatMessage }> = ({
-  currentUser,
-  message,
-}) => {
-  const senderUser = message.sender.split(".")[0];
-  const type: ChatMessageTypes =
-    senderUser === currentUser ? "outgoing" : "incoming";
-
-  console.log("xx", type, currentUser, message);
-  return (
-    <MessageContainer type={type}>
-      <div>
-        <SmallText>{senderUser}</SmallText>
-      </div>
-      <div>{message.content}</div>
-    </MessageContainer>
   );
 };
 

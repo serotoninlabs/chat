@@ -1,12 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from "idb";
-import {
-  KeyPair,
-  PreKey,
-  PreKeyBundle,
-  SerializedKeyPair,
-  SignedPreKey,
-} from "../types";
-import { deserializeKey, deserializeKeyPair, serializeKey } from "../utils";
+import { EncryptedMessage, PreKey, PreKeyBundle } from "../types";
+import { deserializeKey, serializeKey } from "../utils";
 import { Address } from "./ChatService";
 import { RemoteService } from "./RemoteService";
 import { SignalService } from "./SignalService";
@@ -31,6 +25,12 @@ interface RemoteStorageSchema extends DBSchema {
   };
 }
 
+const allCallbacks: {
+  [key: string]: Array<
+    (sender: Address, message: EncryptedMessage) => Promise<void>
+  >;
+} = {};
+
 export class DemoRemoteService implements RemoteService {
   private initialized = false;
   private address: Address;
@@ -39,7 +39,32 @@ export class DemoRemoteService implements RemoteService {
   constructor(address: Address) {
     this.address = address;
   }
-
+  public async send(
+    recipient: Address,
+    message: EncryptedMessage
+  ): Promise<void> {
+    const callbacks = allCallbacks[recipient.toIdentifier()];
+    if (callbacks) {
+      for (const cb of callbacks) {
+        await cb(this.address, message);
+      }
+    }
+  }
+  subscribe(
+    onMessage: (sender: Address, message: EncryptedMessage) => Promise<void>
+  ): void {
+    const userCallbacks = allCallbacks[this.address.toIdentifier()];
+    if (!userCallbacks) {
+      allCallbacks[this.address.toIdentifier()] = [onMessage];
+    } else {
+      userCallbacks.push(onMessage);
+    }
+  }
+  unsubscribe(
+    onMessage: (sender: Address, message: EncryptedMessage) => Promise<void>
+  ): void {
+    throw new Error("Method not implemented.");
+  }
   static async build(address: Address): Promise<DemoRemoteService> {
     const service = new DemoRemoteService(address);
     await service.init();
@@ -59,58 +84,48 @@ export class DemoRemoteService implements RemoteService {
     });
   }
 
-  public async generatePreKeyBundle(
+  public async getConversationParticipants(
     conversationId: string
-  ): Promise<{ address: Address; bundle: PreKeyBundle }[]> {
-    const participants = ["alice", "bob", "carol"];
-    const users = await Promise.all(
-      participants.map((uid) => this.db.get("users", uid))
-    );
+  ): Promise<Address[]> {
+    const users = ["alice", "bob", "carol"];
 
-    let allAddresses: string[] = [];
-    users.forEach((u) => {
-      if (u) {
-        allAddresses = allAddresses.concat(u.addresses);
+    let addresses: Address[] = [];
+    for (const username of users) {
+      const user = await this.db.get("users", username);
+      if (user) {
+        addresses = addresses.concat(
+          user.addresses.map((i) => Address.fromString(i))
+        );
       }
-    }, []);
-
-    let results: { address: Address; bundle: PreKeyBundle }[] = [];
-    for (const address of allAddresses) {
-      if (address == this.address.toIdentifier()) {
-        continue;
-      }
-      const identity = await this.db.get("identities", address);
-      if (!identity) {
-        throw new Error("couldnt find identity");
-      }
-
-      const preKeyId = parseInt(Object.keys(identity.preKeys)[0]);
-      const preKey = identity.preKeys[preKeyId];
-      const signedPreKeyId = parseInt(Object.keys(identity.signedPreKeys)[0]);
-      const signedPreKey = identity.signedPreKeys[signedPreKeyId];
-
-      const userAddress = Address.fromString(address);
-      results.push({
-        address: userAddress,
-        bundle: {
-          registrationId: SignalService.userIdToRegistrationId(
-            userAddress.userId
-          ),
-          identityKey: deserializeKey(identity.identityKey),
-          signedPreKey: {
-            keyId: signedPreKeyId,
-            publicKey: deserializeKey(signedPreKey.pubKey),
-            signature: deserializeKey(signedPreKey.signature),
-          },
-          preKey: {
-            keyId: preKeyId,
-            publicKey: deserializeKey(preKey.pubKey),
-          },
-        },
-      });
     }
 
-    return results;
+    return addresses;
+  }
+
+  public async generatePreKeyBundle(address: Address): Promise<PreKeyBundle> {
+    const identity = await this.db.get("identities", address.toIdentifier());
+    if (!identity) {
+      throw new Error("couldnt find identity");
+    }
+
+    const preKeyId = parseInt(Object.keys(identity.preKeys)[0]);
+    const preKey = identity.preKeys[preKeyId];
+    const signedPreKeyId = parseInt(Object.keys(identity.signedPreKeys)[0]);
+    const signedPreKey = identity.signedPreKeys[signedPreKeyId];
+
+    return {
+      registrationId: SignalService.userIdToRegistrationId(address.userId),
+      identityKey: deserializeKey(identity.identityKey),
+      signedPreKey: {
+        keyId: signedPreKeyId,
+        publicKey: deserializeKey(signedPreKey.pubKey),
+        signature: deserializeKey(signedPreKey.signature),
+      },
+      preKey: {
+        keyId: preKeyId,
+        publicKey: deserializeKey(preKey.pubKey),
+      },
+    };
   }
   public async saveIdentity(
     identifier: string,

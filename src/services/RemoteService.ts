@@ -1,10 +1,16 @@
-import { PreKey, PreKeyBundle } from "../types";
+import { EncryptedMessage, PreKey, PreKeyBundle } from "../types";
 import { Address } from "./ChatService";
 
 export interface RemoteService {
-  generatePreKeyBundle(
-    conversationId: string
-  ): Promise<{ address: Address; bundle: PreKeyBundle }[]>;
+  send(recipient: Address, message: EncryptedMessage): Promise<void>;
+  subscribe(
+    onMessage: (sender: Address, message: EncryptedMessage) => Promise<void>
+  ): void;
+  unsubscribe(
+    onMessage: (sender: Address, message: EncryptedMessage) => Promise<void>
+  ): void;
+  getConversationParticipants(conversationId: string): Promise<Address[]>;
+  generatePreKeyBundle(addresses: Address): Promise<PreKeyBundle>;
   saveIdentity(identifier: string, identityKey: string): Promise<void>;
   // removeAllSessions(identifier: string): Promise<void>;
   loadIdentityKey(identifier: string): Promise<undefined | ArrayBuffer>;
