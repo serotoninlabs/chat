@@ -1,0 +1,6 @@
+mutation StoreSignedPreKey(
+  $deviceId: String!
+  $input: SignalSignedPreKeyInput!
+) {
+  signalStoreSignedPreKey(deviceId: $deviceId, input: $input)
+}

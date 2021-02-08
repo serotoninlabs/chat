@@ -1,0 +1,14 @@
+subscription OnMessageAdded($deviceId: String!) {
+  signalMessages(deviceId: $deviceId) {
+    receiptId
+    sender {
+      userId
+      deviceId
+    }
+    ciphertext {
+      body
+      type
+      registrationId
+    }
+  }
+}

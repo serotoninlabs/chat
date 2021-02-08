@@ -1,0 +1,19 @@
+mutation GeneratePreKeyBundle($address: SignalAddressInput!) {
+  signalGeneratePreKeyBundle(address: $address) {
+    address {
+      userId
+      deviceId
+    }
+    registrationId
+    identityKey
+    signedPreKey {
+      keyId
+      pubKey
+      signature
+    }
+    preKey {
+      keyId
+      pubKey
+    }
+  }
+}

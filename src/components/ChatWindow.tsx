@@ -8,9 +8,12 @@ import {
   Row,
   TextInput,
 } from "@serotonin/components";
-import { ChatMessage } from "./services/ChatService";
+import { ChatMessage } from "../services/ChatService";
 
-import { Message } from "./ChatMessage";
+import {
+  ChatMessage as ChatMessageComponent,
+  ChatMessageProps,
+} from "./ChatMessage";
 
 const MessagesContainer = styled.div``;
 
@@ -81,26 +84,33 @@ export interface ChatWindowProps {
   topElement?: React.ReactElement;
   currentUser: string;
   messages: ChatMessage[];
+  messageComponent?: React.FC<ChatMessageProps>;
   onSend(content: string): Promise<void>;
 }
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   topElement,
   currentUser,
   messages,
+  messageComponent,
   onSend,
 }) => {
   return (
     <WindowContainer>
-      <Messsages currentUser={currentUser} messages={messages}></Messsages>
+      <Messsages
+        currentUser={currentUser}
+        messages={messages}
+        messageComponent={messageComponent}
+      ></Messsages>
       <MessageInput onSend={onSend} />
     </WindowContainer>
   );
 };
 
-const Messsages: React.FC<{ currentUser: string; messages: ChatMessage[] }> = ({
-  currentUser,
-  messages,
-}) => {
+const Messsages: React.FC<{
+  currentUser: string;
+  messageComponent?: React.FC<ChatMessageProps>;
+  messages: ChatMessage[];
+}> = ({ currentUser, messages, messageComponent }) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [showNewButton, setShowNewButton] = useState(false);
@@ -162,13 +172,18 @@ const Messsages: React.FC<{ currentUser: string; messages: ChatMessage[] }> = ({
         New Messages
       </NewMessages>
       <MessagesViewport ref={divRef}>
-        {messages.map((message) => (
-          <Message
-            key={message.messageId}
-            currentUser={currentUser}
-            message={message}
-          />
-        ))}
+        {messages.map((message) => {
+          const Component = messageComponent
+            ? messageComponent
+            : ChatMessageComponent;
+          return (
+            <Component
+              key={message.messageId}
+              currentUser={currentUser}
+              message={message}
+            />
+          );
+        })}
       </MessagesViewport>
     </MessagesContainer>
   );

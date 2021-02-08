@@ -1,0 +1,3 @@
+mutation RemovePreKey($deviceId: String!, $keyId: Int!) {
+  signalRemovePreKey(deviceId: $deviceId, keyId: $keyId)
+}

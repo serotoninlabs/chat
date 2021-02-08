@@ -1,0 +1,3 @@
+mutation AcknowledgeMessages($deviceId: String!, $messageIds: [String!]!) {
+  signalAcknowledgeMessages(deviceId: $deviceId, messageIds: $messageIds)
+}

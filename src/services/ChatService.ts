@@ -1,31 +1,31 @@
 import { StatefulService } from "./StatefulService";
 import { v4 as uuid } from "uuid";
-import { SignalService } from "./SignalService";
+import { Address, AddressToString, SignalService } from "./SignalService";
 import { RemoteService } from "./RemoteService";
 import { ChatStorage } from "./ChatStorage";
 import { SecureMessage } from "./SecureMessage";
 
 export interface ChatState {}
 
-export class Address {
-  public userId: string;
-  public deviceId: string;
-  static fromString(input: string): Address {
-    const [userId, deviceId] = input.split(".");
-    return new Address(userId, deviceId);
-  }
-  constructor(userId: string, deviceId: string) {
-    this.userId = userId;
-    this.deviceId = deviceId;
-  }
+// export class Address {
+//   public userId: string;
+//   public deviceId: string;
+//   static fromString(input: string): Address {
+//     const [userId, deviceId] = input.split(".");
+//     return new Address(userId, deviceId);
+//   }
+//   constructor(userId: string, deviceId: string) {
+//     this.userId = userId;
+//     this.deviceId = deviceId;
+//   }
 
-  public toIdentifier() {
-    return `${this.userId}.${this.deviceId}`;
-  }
-  public toString() {
-    return this.toIdentifier();
-  }
-}
+//   public toIdentifier() {
+//     return `${this.userId}.${this.deviceId}`;
+//   }
+//   public toString() {
+//     return this.toIdentifier();
+//   }
+// }
 
 export type ChatMessage = {
   conversationId: string;
@@ -48,17 +48,19 @@ export class ChatService extends StatefulService<ChatState> {
   public storage: ChatStorage;
   public signal: SignalService;
   public remote: RemoteService;
-  public address: Address;
   // protected conversations: { [key: string]: Conversation } = {};
 
   public static async build(
     signal: SignalService,
     remote: RemoteService,
-    address: Address
+    userId: string,
+    storagePrefix?: string
   ): Promise<ChatService> {
-    const storage = new ChatStorage(address);
-    await storage.initialize();
-    const service = new ChatService(storage, signal, remote, address);
+    const storage = new ChatStorage();
+    await storage.initialize(
+      storagePrefix ? `${userId}/${storagePrefix}` : userId
+    );
+    const service = new ChatService(storage, signal, remote);
     await service.initialize();
     return service;
   }
@@ -66,14 +68,12 @@ export class ChatService extends StatefulService<ChatState> {
   constructor(
     storage: ChatStorage,
     signal: SignalService,
-    remote: RemoteService,
-    address: Address
+    remote: RemoteService
   ) {
     super({ messages: [] });
     this.storage = storage;
     this.signal = signal;
     this.remote = remote;
-    this.address = address;
   }
   public async initialize() {
     this.signal.decryptedMessageSubscribe(
@@ -85,37 +85,33 @@ export class ChatService extends StatefulService<ChatState> {
     const message: ChatMessage = {
       conversationId,
       messageId: uuid(),
-      sender: this.getAddress().toIdentifier(),
+      sender: this.signal.getAddressString(),
       content,
       timestamp: new Date().toISOString(),
     };
 
-    // todo(dankins): this is dumb and should be cached or something
     const participants = await this.remote.getConversationParticipants(
       conversationId
     );
 
     for (const recipient of participants) {
-      if (recipient.toIdentifier() !== this.address.toIdentifier()) {
+      if (AddressToString(recipient) !== this.signal.getAddressString()) {
         const payload: SecureMessage = {
           type: "superduper.so/chat/message",
           payload: message,
         };
         const ciphertext = await this.signal.encrypt(recipient, payload);
-        await this.remote.send(recipient, ciphertext);
+        await this.remote.send(this.signal.getAddress(), recipient, ciphertext);
       }
     }
     await this.storage.storeMessage(message);
-  }
-
-  public getAddress(): Address {
-    return this.address;
   }
 
   public async onDecryptedMessage(
     sender: Address,
     message: SecureMessage
   ): Promise<void> {
+    console.log("onDecryptedMessage", sender, message);
     if (message.type !== "superduper.so/chat/message") {
       return;
     }

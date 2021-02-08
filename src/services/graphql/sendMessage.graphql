@@ -1,0 +1,11 @@
+mutation SendMessage(
+  $deviceId: String!
+  $recipient: SignalAddressInput!
+  $ciphertext: SignalEncryptedMessageInput!
+) {
+  signalSendMessage(
+    deviceId: $deviceId
+    recipient: $recipient
+    ciphertext: $ciphertext
+  )
+}

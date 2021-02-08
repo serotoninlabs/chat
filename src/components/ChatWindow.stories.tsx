@@ -1,20 +1,17 @@
 import { Meta } from "@storybook/react";
 import { useCallback, useEffect, useState } from "react";
 import faker from "faker";
-import {
-  ChatWindow as ChatWindowComponent,
-  PlaintextMessage,
-  MessageTypes,
-} from "./ChatWindow";
+import { ChatWindow as ChatWindowComponent } from "./ChatWindow";
+import { ChatMessage } from "../services/ChatService";
 export default {
   title: "Chat/Window",
   component: ChatWindowComponent,
 } as Meta;
 
-const types: MessageTypes[] = ["inbound", "outbound", "event"];
+const users = ["alice", "bob"];
 
 export const ChatWindow = () => {
-  const [messages, setMessages] = useState<PlaintextMessage[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     randomMessage(),
     randomMessage(),
     randomMessage(),
@@ -25,11 +22,13 @@ export const ChatWindow = () => {
     randomMessage(),
     randomMessage(),
   ]);
-  function randomMessage(): PlaintextMessage {
+  function randomMessage(): ChatMessage {
     return {
-      type: types[faker.random.number(2)],
-      id: faker.random.uuid(),
+      conversationId: "test",
+      sender: users[faker.random.number(1)],
+      messageId: faker.random.uuid(),
       content: faker.lorem.sentence(),
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -44,5 +43,11 @@ export const ChatWindow = () => {
     };
   }, [messages, setMessages]);
 
-  return <ChatWindowComponent messages={messages} onSend={console.log} />;
+  return (
+    <ChatWindowComponent
+      currentUser={"alice"}
+      messages={messages}
+      onSend={async (content) => console.log("send", content)}
+    />
+  );
 };

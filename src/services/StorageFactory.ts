@@ -35,8 +35,8 @@ export abstract class StorageFactory<Schema extends DBSchema> {
     };
   } = {};
 
-  public async initialize(): Promise<void> {
-    const name = `${this.namespace}/${this.databaseName}`;
+  public async initialize(dbPrefix: string): Promise<void> {
+    const name = `${this.namespace}/${this.databaseName}/${dbPrefix}`;
     const version = this.version;
     this.db = await openDB<Schema>(name, version, {
       upgrade: (db) => {

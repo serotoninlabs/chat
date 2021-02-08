@@ -2,9 +2,9 @@ import { Meta } from "@storybook/react";
 import styled from "styled-components";
 import { useEffect, useMemo, useState } from "react";
 
-import { ChatManager, ManagedChatWindow } from "./ChatManager";
-import { DemoChatService } from "./services/DemoChatService";
-import { ChatService } from "./services/ChatService";
+import { ChatManager, ManagedChatWindow } from "../ChatManager";
+import { DemoChatService } from "../services/DemoChatService";
+import { ChatService } from "../services/ChatService";
 
 export default {
   title: "Chat/Demo",

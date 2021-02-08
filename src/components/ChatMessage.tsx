@@ -1,24 +1,26 @@
 import { SmallText } from "@serotonin/components/dist/module";
 import React from "react";
-import styled from "styled-components";
-import { ChatMessage } from "./services/ChatService";
+import styled, { DefaultTheme } from "styled-components";
+import { ChatMessage as Message } from "../services/ChatService";
 
 type ChatMessageTypes = "incoming" | "outgoing" | "event";
 
-type TypeStyle = {
-  backgroundColor: string;
-};
-const TypeStyles: {
+const TypeStyles = (
+  props: DefaultTheme
+): {
   [type in ChatMessageTypes]: any;
-} = {
+} => ({
   incoming: {
+    fontFamily: props.fonts.sansSerif,
     borderRadius: "6px",
     padding: "8px",
     margin: "8px 45px 8px 8px",
-    backgroundColor: "#EFEEF2",
+    // backgroundColor: "#EFEEF2",
+    backgroundColor: props.colors.secondary.main,
     textAlign: "left",
   },
   outgoing: {
+    fontFamily: props.fonts.sansSerif,
     borderRadius: "6px",
     padding: "8px",
     margin: "8px 8px 8px 45px",
@@ -26,6 +28,7 @@ const TypeStyles: {
     textAlign: "right",
   },
   event: {
+    fontFamily: props.fonts.sansSerif,
     fontSize: "smaller",
     color: "#aaa",
     padding: "8px",
@@ -33,16 +36,21 @@ const TypeStyles: {
     backgroundColor: "white",
     textAlign: "center",
   },
-};
+});
 
 const MessageContainer = styled.div<{ type: ChatMessageTypes }>(
-  (props) => TypeStyles[props.type]
+  (props) => TypeStyles(props.theme)[props.type]
 );
 
-export const Message: React.FC<{
+export interface ChatMessageProps {
   currentUser: string;
-  message: ChatMessage;
-}> = ({ currentUser, message }) => {
+  message: Message;
+}
+
+export const ChatMessage: React.FC<ChatMessageProps> = ({
+  currentUser,
+  message,
+}) => {
   const senderUser = message.sender.split(".")[0];
   const type: ChatMessageTypes =
     senderUser === currentUser ? "outgoing" : "incoming";

@@ -40,6 +40,10 @@ export interface SerializedPreKeyBundle {
   };
 }
 export interface PreKeyBundle {
+  address: {
+    userId: string;
+    deviceId: string;
+  };
   registrationId: number;
   identityKey: ArrayBuffer;
   signedPreKey: {
@@ -55,7 +59,7 @@ export interface PreKeyBundle {
 export type EncryptedMessage = {
   type: number;
   body: string;
-  registrationId: string;
+  registrationId: number;
 };
 export interface SessionBuilder {
   new (store: any, address: SignalProtocolAddress): SessionBuilder;

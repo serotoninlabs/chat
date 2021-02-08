@@ -1,5 +1,5 @@
-import { IDBPDatabase, DBSchema, StoreNames } from "idb";
-import { Address, ChatMessage } from "./ChatService";
+import { IDBPDatabase, DBSchema } from "idb";
+import { ChatMessage } from "./ChatService";
 import { StorageFactory } from "./StorageFactory";
 
 export interface MessageWrapper {
@@ -18,7 +18,7 @@ export interface ChatStorageSchema extends DBSchema {
 export class ChatStorage extends StorageFactory<ChatStorageSchema> {
   public version = 1;
   public namespace = "superduper.so";
-  public databaseName;
+  public databaseName = "chat";
   public migrations = {
     1(db: IDBPDatabase<ChatStorageSchema>) {
       const messages = db.createObjectStore("messages");
@@ -26,11 +26,6 @@ export class ChatStorage extends StorageFactory<ChatStorageSchema> {
       messages.createIndex("date", ["message.conversationId", "date"]);
     },
   };
-
-  constructor(address: Address) {
-    super();
-    this.databaseName = "chat-" + address.toIdentifier();
-  }
 
   public async getAllFromConversation(
     conversationId: string

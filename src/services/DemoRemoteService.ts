@@ -1,8 +1,12 @@
 import { openDB, DBSchema, IDBPDatabase } from "idb";
 import { EncryptedMessage, PreKey, PreKeyBundle } from "../types";
 import { deserializeKey, serializeKey } from "../utils";
-import { Address } from "./ChatService";
-import { RemoteService } from "./RemoteService";
+import { Address, AddressFromString, AddressToString } from "./SignalService";
+import {
+  RegistrationResult,
+  RemoteDeviceRegistration,
+  RemoteService,
+} from "./RemoteService";
 import { SignalService } from "./SignalService";
 
 interface Identity {
@@ -19,7 +23,7 @@ interface RemoteStorageSchema extends DBSchema {
   users: {
     key: string;
     value: {
-      username: string;
+      userId: string;
       addresses: string[];
     };
   };
@@ -32,41 +36,108 @@ const allCallbacks: {
 } = {};
 
 export class DemoRemoteService implements RemoteService {
-  private initialized = false;
-  private address: Address;
+  private address!: Address;
   private db!: IDBPDatabase<RemoteStorageSchema>;
 
-  constructor(address: Address) {
+  public setAddress(address: Address) {
+    console.log("setting address", address);
     this.address = address;
   }
+
+  public async registerDevice(
+    registration: RemoteDeviceRegistration
+  ): Promise<RegistrationResult> {
+    const registrationId = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+    const user = await this.db.get("users", registration.userId);
+    const deviceId = user ? (user.addresses.length + 1).toString() : "1";
+    const address = { userId: registration.userId, deviceId };
+
+    const preKeys: { [keyId: number]: { pubKey: string } } = {};
+    for (const preKey of registration.publicPreKeys) {
+      preKeys[preKey.keyId] = {
+        pubKey: serializeKey(preKey.pubKey),
+      };
+    }
+
+    const identity: Identity = {
+      identityKey: serializeKey(registration.identityPublicKey),
+      preKeys,
+      signedPreKeys: {
+        [registration.signedPreKey.keyId]: {
+          pubKey: serializeKey(registration.signedPreKey.pubKey),
+          signature: serializeKey(registration.signedPreKey.signature),
+        },
+      },
+    };
+
+    await this.db.put("identities", identity, AddressToString(address));
+
+    const userId = registration.userId;
+    if (!user) {
+      this.db.put(
+        "users",
+        { userId, addresses: [`${userId}.${deviceId}`] },
+        userId
+      );
+    } else {
+      this.db.put(
+        "users",
+        { userId, addresses: user.addresses.concat([`${userId}.${deviceId}`]) },
+        userId
+      );
+    }
+
+    return {
+      deviceId,
+      registrationId,
+    };
+  }
   public async send(
+    sender: Address,
     recipient: Address,
     message: EncryptedMessage
   ): Promise<void> {
-    const callbacks = allCallbacks[recipient.toIdentifier()];
+    console.log(
+      "send",
+      sender,
+      recipient,
+      allCallbacks,
+      AddressToString(recipient),
+      allCallbacks[AddressToString(recipient)]
+    );
+    const callbacks = allCallbacks[AddressToString(recipient)];
     if (callbacks) {
       for (const cb of callbacks) {
-        await cb(this.address, message);
+        await cb(sender, message);
       }
     }
   }
   subscribe(
+    subscriber: Address,
     onMessage: (sender: Address, message: EncryptedMessage) => Promise<void>
   ): void {
-    const userCallbacks = allCallbacks[this.address.toIdentifier()];
+    console.log("subscribing address", this.address);
+    const userCallbacks = allCallbacks[AddressToString(subscriber)];
     if (!userCallbacks) {
-      allCallbacks[this.address.toIdentifier()] = [onMessage];
+      allCallbacks[AddressToString(subscriber)] = [onMessage];
     } else {
       userCallbacks.push(onMessage);
     }
   }
+  public async acknowledgeMessages(
+    address: Address,
+    messageIds: string[]
+  ): Promise<void> {
+    return;
+  }
   unsubscribe(
+    subscriber: Address,
     onMessage: (sender: Address, message: EncryptedMessage) => Promise<void>
   ): void {
     throw new Error("Method not implemented.");
   }
-  static async build(address: Address): Promise<DemoRemoteService> {
-    const service = new DemoRemoteService(address);
+  static async build(): Promise<DemoRemoteService> {
+    const service = new DemoRemoteService();
     await service.init();
 
     return service;
@@ -94,7 +165,7 @@ export class DemoRemoteService implements RemoteService {
       const user = await this.db.get("users", username);
       if (user) {
         addresses = addresses.concat(
-          user.addresses.map((i) => Address.fromString(i))
+          user.addresses.map((i) => AddressFromString(i))
         );
       }
     }
@@ -103,7 +174,7 @@ export class DemoRemoteService implements RemoteService {
   }
 
   public async generatePreKeyBundle(address: Address): Promise<PreKeyBundle> {
-    const identity = await this.db.get("identities", address.toIdentifier());
+    const identity = await this.db.get("identities", AddressToString(address));
     if (!identity) {
       throw new Error("couldnt find identity");
     }
@@ -113,7 +184,8 @@ export class DemoRemoteService implements RemoteService {
     const signedPreKeyId = parseInt(Object.keys(identity.signedPreKeys)[0]);
     const signedPreKey = identity.signedPreKeys[signedPreKeyId];
 
-    return {
+    const rtn = {
+      address,
       registrationId: SignalService.userIdToRegistrationId(address.userId),
       identityKey: deserializeKey(identity.identityKey),
       signedPreKey: {
@@ -126,47 +198,55 @@ export class DemoRemoteService implements RemoteService {
         publicKey: deserializeKey(preKey.pubKey),
       },
     };
-  }
-  public async saveIdentity(
-    identifier: string,
-    identityKey: string
-  ): Promise<void> {
-    const identity: Identity = {
-      identityKey,
-      signedPreKeys: [],
-      preKeys: {},
-    };
-    if (this.address.toIdentifier() !== identifier) {
-      return;
-    }
-    await this.db.add("identities", identity, identifier);
 
-    const username = identifier.split(".")[0];
-    const user = await this.db.get("users", username);
-    if (!user) {
-      this.db.put("users", { username, addresses: [identifier] }, username);
-    } else {
-      this.db.put(
-        "users",
-        { username, addresses: user.addresses.concat([identifier]) },
-        username
-      );
-    }
+    // delete prekey
+    delete identity.preKeys[preKeyId];
+    const updatedIdentity = { ...identity, preKeys: identity.preKeys };
+    await this.db.put("identities", updatedIdentity, AddressToString(address));
+
+    console.log("bundle", rtn);
+    return rtn;
   }
-  public async loadIdentityKey(
-    identifier: string
-  ): Promise<ArrayBuffer | undefined> {
-    const result = await this.db.get("identities", identifier);
-    if (!result) {
-      return;
-    }
-    return deserializeKey(result.identityKey);
-  }
-  public async storePreKeys(publicPreKeys: PreKey[]): Promise<void> {
-    const identity = await this.db.get(
-      "identities",
-      this.address.toIdentifier()
-    );
+  // public async saveIdentity(
+  //   currentAddress: Address,
+  //   identityKey: ArrayBuffer
+  // ): Promise<void> {
+  //   const identity: Identity = {
+  //     identityKey: serializeKey(identityKey),
+  //     signedPreKeys: [],
+  //     preKeys: {},
+  //   };
+  //   if (this.address.toIdentifier() !== identifier) {
+  //     return;
+  //   }
+  //   await this.db.add("identities", identity, identifier);
+
+  //   const username = identifier.split(".")[0];
+  //   const user = await this.db.get("users", username);
+  //   if (!user) {
+  //     this.db.put("users", { username, addresses: [identifier] }, username);
+  //   } else {
+  //     this.db.put(
+  //       "users",
+  //       { username, addresses: user.addresses.concat([identifier]) },
+  //       username
+  //     );
+  //   }
+  // }
+  // public async loadIdentityKey(
+  //   identifier: string
+  // ): Promise<ArrayBuffer | undefined> {
+  //   const result = await this.db.get("identities", identifier);
+  //   if (!result) {
+  //     return;
+  //   }
+  //   return deserializeKey(result.identityKey);
+  // }
+  public async storePreKeys(
+    address: Address,
+    publicPreKeys: PreKey[]
+  ): Promise<void> {
+    const identity = await this.db.get("identities", AddressToString(address));
     if (!identity) {
       throw new Error("identity not found");
     }
@@ -182,33 +262,28 @@ export class DemoRemoteService implements RemoteService {
       ...identity,
       preKeys: nextPreKeys,
     };
-    await this.db.put("identities", update, this.address.toIdentifier());
+    await this.db.put("identities", update, AddressToString(address));
   }
-  public async removePreKey(keyId: number): Promise<void> {
-    const identity = await this.db.get(
-      "identities",
-      this.address.toIdentifier()
-    );
-    if (!identity) {
-      throw new Error("identity not found");
-    }
+  // public async removePreKey(address: Address, keyId: number): Promise<void> {
+  //   const identity = await this.db.get("identities", AddressToString(address));
+  //   if (!identity) {
+  //     throw new Error("identity not found");
+  //   }
 
-    const { [keyId]: removed, ...nextPreKeys } = identity.preKeys;
-    const update = {
-      ...identity,
-      preKeys: nextPreKeys,
-    };
-    await this.db.put("identities", update, this.address.toIdentifier());
-  }
+  //   const { [keyId]: removed, ...nextPreKeys } = identity.preKeys;
+  //   const update = {
+  //     ...identity,
+  //     preKeys: nextPreKeys,
+  //   };
+  //   await this.db.put("identities", update, AddressToString(address));
+  // }
   public async storeSignedPreKey(
+    address: Address,
     keyId: number,
     pubKey: ArrayBuffer,
     signature: ArrayBuffer
   ): Promise<void> {
-    const identity = await this.db.get(
-      "identities",
-      this.address.toIdentifier()
-    );
+    const identity = await this.db.get("identities", AddressToString(address));
     if (!identity) {
       throw new Error("identity not found");
     }
@@ -225,6 +300,6 @@ export class DemoRemoteService implements RemoteService {
       ...identity,
       signedPreKeys: next,
     };
-    await this.db.put("identities", update, this.address.toIdentifier());
+    await this.db.put("identities", update, AddressToString(address));
   }
 }

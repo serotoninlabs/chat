@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ChatWindow } from "./ChatWindow";
+import { ChatMessageProps } from "./components/ChatMessage";
+import { ChatWindow } from "./components/ChatWindow";
 import { useConversation } from "./hooks/useConversation";
 import { ChatService, ChatState } from "./services/ChatService";
 
@@ -7,7 +8,6 @@ export interface Manager {
   service: ChatService;
 }
 
-const defaultContext = { messages: [], async onSend(content: string) {} };
 // @ts-ignore ignore setting undefined
 export const ChatManagerContext = React.createContext<Manager>();
 
@@ -22,15 +22,17 @@ export const ChatManager: React.FC<{ service: ChatService }> = ({
   );
 };
 
-export const ManagedChatWindow: React.FC<{ conversationId: string }> = ({
-  conversationId,
-}) => {
-  const { messages, send, address } = useConversation(conversationId);
+export const ManagedChatWindow: React.FC<{
+  conversationId: string;
+  messageComponent?: React.FC<ChatMessageProps>;
+}> = ({ conversationId, messageComponent }) => {
+  const { messages, send, userId } = useConversation(conversationId);
 
   return (
     <ChatWindow
-      currentUser={address.userId}
+      currentUser={userId}
       messages={messages}
+      messageComponent={messageComponent}
       onSend={(content) => send(conversationId, content)}
     />
   );

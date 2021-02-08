@@ -1,0 +1,6 @@
+mutation RegisterDevice($input: SignalRegisterDeviceInput!) {
+  signalRegisterDevice(input: $input) {
+    deviceId
+    registrationId
+  }
+}

@@ -1,19 +1,31 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useEffect, useCallback, useState, useReducer } from "react";
 import { ChatManagerContext } from "../ChatManager";
 import { ChatMessage } from "../services/ChatService";
 import { MessageWrapper } from "../services/ChatStorage";
 
+interface State {
+  messages: string[];
+}
+
+function reducer(
+  messages: ChatMessage[],
+  newMessages: ChatMessage[]
+): ChatMessage[] {
+  return messages.concat(newMessages);
+}
+
 export function useConversation(conversationId: string) {
   const [initialized, setInitialized] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { service } = React.useContext(ChatManagerContext);
+
+  const [messages, addMessages] = useReducer(reducer, []);
 
   useEffect(() => {
     async function init() {
       const messages = await service.storage.getAllFromConversation(
         conversationId
       );
-      setMessages(messages.map((m) => m.message));
+      addMessages(messages.map((m) => m.message));
       setInitialized(true);
     }
 
@@ -23,9 +35,9 @@ export function useConversation(conversationId: string) {
   const onMessageReceived = useCallback(
     (message: MessageWrapper) => {
       console.log("new message", message);
-      setMessages(messages.concat([message.message]));
+      addMessages([message.message]);
     },
-    [service, messages]
+    [service]
   );
 
   useEffect(() => {
@@ -46,7 +58,7 @@ export function useConversation(conversationId: string) {
 
   return {
     messages,
-    address: service.address,
+    userId: service.signal.getAddress().userId,
     send: service.send.bind(service),
   };
 }
