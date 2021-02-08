@@ -1,11 +1,7 @@
 import React, { useEffect, useCallback, useState, useReducer } from "react";
-import { ChatManagerContext } from "../ChatManager";
+import { ChatManagerContext } from "../components/ChatManager";
 import { ChatMessage } from "../services/ChatService";
 import { MessageWrapper } from "../services/ChatStorage";
-
-interface State {
-  messages: string[];
-}
 
 function reducer(
   messages: ChatMessage[],

@@ -1,34 +1,56 @@
-import React, { useCallback, useRef } from "react";
-import { useSignal } from "./ChatProvider";
+import React, { useCallback, useRef, useState } from "react";
+import {
+  Row,
+  TextInput,
+  ActionButton,
+  ForwardIcon,
+} from "@serotonin/components";
+import styled from "styled-components";
 
-export type MessageInputProps = {
-  recipientUserId: string;
-  onMessageSend?(plaintext: string): void;
-};
-export const MessageInput: React.FC<MessageInputProps> = ({
-  recipientUserId,
-  onMessageSend,
-}) => {
-  const { signal } = useSignal();
-  const inputEl = useRef<HTMLInputElement>(null);
+const MessageInputContainer = styled(Row)`
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: row;
+  > *:first-child {
+    flex-grow: 1;
+    height: 100%;
+  }
+  > *:nth-child(2) {
+    margin: 8px;
+  }
+`;
+const MessageInputComponent = styled(TextInput)`
+  border: none;
+  margin-top: 0px;
+  > label {
+    margin-bottom: 0px;
+  }
+  > input {
+    border: none;
+  }
+`;
 
-  const send = useCallback(() => {
-    if (inputEl) {
-      const message = inputEl.current!.value;
-      console.log("ref", inputEl, message);
-      signal.sendMessage(recipientUserId, 0, message).then(() => {
-        console.log("message sent");
-        inputEl.current!.value = "";
-        if (onMessageSend) {
-          onMessageSend(message);
-        }
-      });
-    }
-  }, [signal]);
+export const MessageInput: React.FC<{
+  onSend(content: string): Promise<void>;
+}> = ({ onSend }) => {
+  const inputRef = useRef<HTMLInputElement>();
+  const [saving, setSaving] = useState(false);
+  const send = useCallback(async () => {
+    setSaving(true);
+    const content = inputRef.current!.value;
+    await onSend(content);
+    inputRef.current!.value = "";
+    setSaving(false);
+  }, [onSend, inputRef]);
   return (
-    <div>
-      <input type="text" ref={inputEl} />
-      <button onClick={send}>Send</button>
-    </div>
+    <MessageInputContainer>
+      <MessageInputComponent
+        name="message"
+        placeholder="Type your message"
+        inputRef={inputRef}
+        disabled={saving}
+      />
+      <ActionButton icon={ForwardIcon} onClick={send} />
+    </MessageInputContainer>
   );
 };

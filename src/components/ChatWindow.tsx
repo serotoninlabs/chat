@@ -1,19 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import {
-  SmallText,
-  ActionButton,
-  Button,
-  ForwardIcon,
-  Row,
-  TextInput,
-} from "@serotonin/components";
+import { Button } from "@serotonin/components";
 import { ChatMessage } from "../services/ChatService";
 
-import {
-  ChatMessage as ChatMessageComponent,
-  ChatMessageProps,
-} from "./ChatMessage";
+import { MessageContainer, ChatMessageProps } from "./MessageContainer";
+import { MessageInput } from "./MessageInput";
 
 const MessagesContainer = styled.div``;
 
@@ -54,29 +45,6 @@ const MessagesViewport = styled.div`
 
   ::-webkit-scrollbar-thumb:hover {
     background: #888;
-  }
-`;
-
-const MessageInputContainer = styled(Row)`
-  border-top: 1px solid #e5e5e5;
-  display: flex;
-  flex-direction: row;
-  > *:first-child {
-    flex-grow: 1;
-    height: 100%;
-  }
-  > *:nth-child(2) {
-    margin: 8px;
-  }
-`;
-const MessageInputComponent = styled(TextInput)`
-  border: none;
-  margin-top: 0px;
-  > label {
-    margin-bottom: 0px;
-  }
-  > input {
-    border: none;
   }
 `;
 
@@ -175,7 +143,7 @@ const Messsages: React.FC<{
         {messages.map((message) => {
           const Component = messageComponent
             ? messageComponent
-            : ChatMessageComponent;
+            : MessageContainer;
           return (
             <Component
               key={message.messageId}
@@ -186,30 +154,5 @@ const Messsages: React.FC<{
         })}
       </MessagesViewport>
     </MessagesContainer>
-  );
-};
-
-const MessageInput: React.FC<{ onSend(content: string): Promise<void> }> = ({
-  onSend,
-}) => {
-  const inputRef = useRef<HTMLInputElement>();
-  const [saving, setSaving] = useState(false);
-  const send = useCallback(async () => {
-    setSaving(true);
-    const content = inputRef.current!.value;
-    await onSend(content);
-    inputRef.current!.value = "";
-    setSaving(false);
-  }, [onSend, inputRef]);
-  return (
-    <MessageInputContainer>
-      <MessageInputComponent
-        name="message"
-        placeholder="Type your message"
-        inputRef={inputRef}
-        disabled={saving}
-      />
-      <ActionButton icon={ForwardIcon} onClick={send} />
-    </MessageInputContainer>
   );
 };

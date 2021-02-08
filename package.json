@@ -1,6 +1,6 @@
 {
   "name": "@serotonin/chat",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "dist/node/index.js",
   "module": "dist/module/index.js",
@@ -13,7 +13,8 @@
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook",
     "postinstall": "patch-package",
-    "codegen": "graphql-codegen --config codegen.yml"
+    "codegen": "graphql-codegen --config codegen.yml",
+    "publish": "npm publish"
   },
   "author": "",
   "license": "ISC",

@@ -31,7 +31,11 @@ interface RemoteStorageSchema extends DBSchema {
 
 const allCallbacks: {
   [key: string]: Array<
-    (sender: Address, message: EncryptedMessage) => Promise<void>
+    (
+      receiptId: string,
+      sender: Address,
+      message: EncryptedMessage
+    ) => Promise<void>
   >;
 } = {};
 
@@ -108,13 +112,17 @@ export class DemoRemoteService implements RemoteService {
     const callbacks = allCallbacks[AddressToString(recipient)];
     if (callbacks) {
       for (const cb of callbacks) {
-        await cb(sender, message);
+        await cb("n/a", sender, message);
       }
     }
   }
   subscribe(
     subscriber: Address,
-    onMessage: (sender: Address, message: EncryptedMessage) => Promise<void>
+    onMessage: (
+      receiptId: string,
+      sender: Address,
+      message: EncryptedMessage
+    ) => Promise<void>
   ): void {
     console.log("subscribing address", this.address);
     const userCallbacks = allCallbacks[AddressToString(subscriber)];
@@ -207,41 +215,6 @@ export class DemoRemoteService implements RemoteService {
     console.log("bundle", rtn);
     return rtn;
   }
-  // public async saveIdentity(
-  //   currentAddress: Address,
-  //   identityKey: ArrayBuffer
-  // ): Promise<void> {
-  //   const identity: Identity = {
-  //     identityKey: serializeKey(identityKey),
-  //     signedPreKeys: [],
-  //     preKeys: {},
-  //   };
-  //   if (this.address.toIdentifier() !== identifier) {
-  //     return;
-  //   }
-  //   await this.db.add("identities", identity, identifier);
-
-  //   const username = identifier.split(".")[0];
-  //   const user = await this.db.get("users", username);
-  //   if (!user) {
-  //     this.db.put("users", { username, addresses: [identifier] }, username);
-  //   } else {
-  //     this.db.put(
-  //       "users",
-  //       { username, addresses: user.addresses.concat([identifier]) },
-  //       username
-  //     );
-  //   }
-  // }
-  // public async loadIdentityKey(
-  //   identifier: string
-  // ): Promise<ArrayBuffer | undefined> {
-  //   const result = await this.db.get("identities", identifier);
-  //   if (!result) {
-  //     return;
-  //   }
-  //   return deserializeKey(result.identityKey);
-  // }
   public async storePreKeys(
     address: Address,
     publicPreKeys: PreKey[]
@@ -264,19 +237,6 @@ export class DemoRemoteService implements RemoteService {
     };
     await this.db.put("identities", update, AddressToString(address));
   }
-  // public async removePreKey(address: Address, keyId: number): Promise<void> {
-  //   const identity = await this.db.get("identities", AddressToString(address));
-  //   if (!identity) {
-  //     throw new Error("identity not found");
-  //   }
-
-  //   const { [keyId]: removed, ...nextPreKeys } = identity.preKeys;
-  //   const update = {
-  //     ...identity,
-  //     preKeys: nextPreKeys,
-  //   };
-  //   await this.db.put("identities", update, AddressToString(address));
-  // }
   public async storeSignedPreKey(
     address: Address,
     keyId: number,
