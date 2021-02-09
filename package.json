@@ -1,6 +1,6 @@
 {
   "name": "@serotonin/chat",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "",
   "main": "dist/node/index.js",
   "module": "dist/module/index.js",
@@ -9,10 +9,10 @@
     "fs": "empty"
   },
   "scripts": {
-    "build": "rollup -c",
+    "build": "rm -rf dist && rollup -c",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook",
-    "postinstall": "patch-package",
+    "patch": "patch-package",
     "codegen": "graphql-codegen --config codegen.yml",
     "publish": "npm publish"
   },
