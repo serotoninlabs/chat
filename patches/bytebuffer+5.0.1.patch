@@ -11,16 +11,3 @@ index 93a7c46..bb47361 100644
  
      /**
       * Constructs a new ByteBuffer.
-diff --git a/node_modules/bytebuffer/src/wrap-node.js b/node_modules/bytebuffer/src/wrap-node.js
-index c157d47..72d6aa0 100644
---- a/node_modules/bytebuffer/src/wrap-node.js
-+++ b/node_modules/bytebuffer/src/wrap-node.js
-@@ -27,7 +27,7 @@ module.exports = (function() {
-     var buffer = require("buffer"),
-         Buffer = buffer["Buffer"],
-         Long = require("long"),
--        memcpy = null; try { memcpy = require("memcpy"); } catch (e) {}
-+        memcpy = null; 
- 
-     //? include("ByteBuffer.js");
- 
