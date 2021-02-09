@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { Button } from "@serotonin/components";
-import { ChatMessage } from "../services/ChatService";
+import { ChatMessage, ConversationMetadata } from "../services/ChatService";
 
 import { MessageContainer, ChatMessageProps } from "./MessageContainer";
 import { MessageInput } from "./MessageInput";
@@ -51,12 +51,14 @@ const MessagesViewport = styled.div`
 export interface ChatWindowProps {
   topElement?: React.ReactElement;
   currentUser: string;
+  conversationMetadata?: ConversationMetadata;
   messages: ChatMessage[];
   messageComponent?: React.FC<ChatMessageProps>;
   onSend(content: string): Promise<void>;
 }
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   topElement,
+  conversationMetadata,
   currentUser,
   messages,
   messageComponent,
@@ -66,6 +68,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     <WindowContainer>
       <Messsages
         currentUser={currentUser}
+        conversationMetadata={conversationMetadata}
         messages={messages}
         messageComponent={messageComponent}
       ></Messsages>
@@ -76,9 +79,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
 const Messsages: React.FC<{
   currentUser: string;
+  conversationMetadata?: ConversationMetadata;
   messageComponent?: React.FC<ChatMessageProps>;
   messages: ChatMessage[];
-}> = ({ currentUser, messages, messageComponent }) => {
+}> = ({ currentUser, conversationMetadata, messages, messageComponent }) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [showNewButton, setShowNewButton] = useState(false);
@@ -148,6 +152,7 @@ const Messsages: React.FC<{
             <Component
               key={message.messageId}
               currentUser={currentUser}
+              conversationMetadata={conversationMetadata}
               message={message}
             />
           );

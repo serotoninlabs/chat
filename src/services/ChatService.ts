@@ -7,25 +7,19 @@ import { SecureMessage } from "./SecureMessage";
 
 export interface ChatState {}
 
-// export class Address {
-//   public userId: string;
-//   public deviceId: string;
-//   static fromString(input: string): Address {
-//     const [userId, deviceId] = input.split(".");
-//     return new Address(userId, deviceId);
-//   }
-//   constructor(userId: string, deviceId: string) {
-//     this.userId = userId;
-//     this.deviceId = deviceId;
-//   }
-
-//   public toIdentifier() {
-//     return `${this.userId}.${this.deviceId}`;
-//   }
-//   public toString() {
-//     return this.toIdentifier();
-//   }
-// }
+export interface ConversationMetadata {
+  id: string;
+  members: {
+    [id: string]: {
+      id: string;
+      profile: {
+        username: string;
+        avatar?: string | null | undefined;
+      };
+    };
+  };
+  participants: Address[];
+}
 
 export type ChatMessage = {
   conversationId: string;
@@ -90,11 +84,11 @@ export class ChatService extends StatefulService<ChatState> {
       timestamp: new Date().toISOString(),
     };
 
-    const participants = await this.remote.getConversationParticipants(
+    const conversation = await this.remote.getConversationMetadata(
       conversationId
     );
 
-    for (const recipient of participants) {
+    for (const recipient of conversation.participants) {
       if (AddressToString(recipient) !== this.signal.getAddressString()) {
         const payload: SecureMessage = {
           type: "superduper.so/chat/message",

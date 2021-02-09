@@ -1,12 +1,15 @@
 query GetConversation($conversationId: String!) {
   conversation(conversationId: $conversationId) {
     id
-    admin {
-      userId
-      deviceId
-    }
     adminUserIds
     type
+    members {
+      id
+      profile {
+        username
+        avatar
+      }
+    }
     participants {
       userId
       deviceId

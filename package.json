@@ -1,6 +1,6 @@
 {
   "name": "@serotonin/chat",
-  "version": "0.0.3",
+  "version": "0.0.8",
   "description": "",
   "main": "dist/node/index.js",
   "module": "dist/module/index.js",
@@ -63,6 +63,7 @@
     "prettier": "^2.2.1",
     "rollup": "^2.35.1",
     "rollup-plugin-img": "^1.1.0",
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-typescript2": "^0.29.0",
     "storybook": "^6.1.11",

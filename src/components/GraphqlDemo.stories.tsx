@@ -14,8 +14,8 @@ import { getMainDefinition } from "@apollo/client/utilities";
 import { setContext } from "@apollo/client/link/context";
 import { WebSocketLink } from "@apollo/client/link/ws";
 
-import { ChatManager, ManagedChatWindow } from "../ChatManager";
-import { DemoChatService } from "../services/DemoChatService";
+import { ChatManager } from "./ChatManager";
+import { ManagedChatWindow } from "./ManagedChatWindow";
 import { ChatService } from "../services/ChatService";
 import { GraphqlRemoteService } from "../services/GraphqlRemoteService";
 import {
@@ -27,7 +27,7 @@ import {
 } from "@serotonin/components/dist/module";
 import { ChatWindow } from "./ChatWindow";
 import { SignalService } from "../services/SignalService";
-import { ChatMessageProps } from "./ChatMessage";
+import { ChatMessageProps } from "./MessageContainer";
 
 export default {
   title: "Chat/Graphql",

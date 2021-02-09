@@ -1,7 +1,7 @@
 import { SmallText } from "@serotonin/components/dist/module";
 import React from "react";
 import styled, { DefaultTheme } from "styled-components";
-import { ChatMessage } from "../services/ChatService";
+import { ChatMessage, ConversationMetadata } from "../services/ChatService";
 
 type ChatMessageTypes = "incoming" | "outgoing" | "event";
 
@@ -44,21 +44,26 @@ const StyledMessageContainer = styled.div<{ type: ChatMessageTypes }>(
 
 export interface ChatMessageProps {
   currentUser: string;
+  conversationMetadata?: ConversationMetadata;
   message: ChatMessage;
 }
 
 export const MessageContainer: React.FC<ChatMessageProps> = ({
   currentUser,
+  conversationMetadata,
   message,
 }) => {
   const senderUser = message.sender.split(".")[0];
   const type: ChatMessageTypes =
     senderUser === currentUser ? "outgoing" : "incoming";
 
+  const user = conversationMetadata?.members[senderUser];
+  console.log;
+
   return (
     <StyledMessageContainer type={type}>
       <div>
-        <SmallText>{senderUser}</SmallText>
+        <SmallText>{user?.profile.username}</SmallText>
       </div>
       <div>{message.content}</div>
     </StyledMessageContainer>

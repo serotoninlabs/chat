@@ -31,13 +31,14 @@ import {
   SendMessageMutation,
   SendMessageMutationVariables,
   RemovePreKeyMutationVariables,
+  Conversation,
 } from "./graphql/generated";
 import {
   RegistrationResult,
   RemoteDeviceRegistration,
   RemoteService,
 } from "./RemoteService";
-import { add } from "lodash";
+import { ConversationMetadata } from "./ChatService";
 
 export class GraphqlRemoteService implements RemoteService {
   private initialized = false;
@@ -168,9 +169,9 @@ export class GraphqlRemoteService implements RemoteService {
     console.log("sending message mutation success", result);
   }
 
-  public async getConversationParticipants(
+  public async getConversationMetadata(
     conversationId: string
-  ): Promise<Address[]> {
+  ): Promise<ConversationMetadata> {
     const result = await this.graphql.query<
       GetConversationQuery,
       GetConversationQueryVariables
@@ -187,7 +188,16 @@ export class GraphqlRemoteService implements RemoteService {
       throw new Error("no data");
     }
 
-    return result.data.conversation.participants;
+    const members: ConversationMetadata["members"] = {};
+    for (const member of result.data.conversation.members) {
+      members[member.id] = member;
+    }
+
+    return {
+      id: result.data.conversation.id,
+      members: members,
+      participants: result.data.conversation.participants,
+    };
   }
 
   public async generatePreKeyBundle(address: Address): Promise<PreKeyBundle> {

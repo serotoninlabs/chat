@@ -8,6 +8,7 @@ import {
   RemoteService,
 } from "./RemoteService";
 import { SignalService } from "./SignalService";
+import { ConversationMetadata } from "./ChatService";
 
 interface Identity {
   identityKey: string;
@@ -163,9 +164,9 @@ export class DemoRemoteService implements RemoteService {
     });
   }
 
-  public async getConversationParticipants(
+  public async getConversationMetadata(
     conversationId: string
-  ): Promise<Address[]> {
+  ): Promise<ConversationMetadata> {
     const users = ["alice", "bob", "carol"];
 
     let addresses: Address[] = [];
@@ -178,7 +179,15 @@ export class DemoRemoteService implements RemoteService {
       }
     }
 
-    return addresses;
+    return {
+      id: conversationId,
+      members: {
+        alice: { id: "alice", profile: { username: "alice" } },
+        bob: { id: "bob", profile: { username: "bob" } },
+        carol: { id: "carol", profile: { username: "carol" } },
+      },
+      participants: addresses,
+    };
   }
 
   public async generatePreKeyBundle(address: Address): Promise<PreKeyBundle> {

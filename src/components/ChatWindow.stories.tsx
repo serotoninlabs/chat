@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import faker from "faker";
 import { ChatWindow as ChatWindowComponent } from "./ChatWindow";
 import { ChatMessage } from "../services/ChatService";
+import { AddressFromString } from "../services/SignalService";
 export default {
   title: "Chat/Window",
   component: ChatWindowComponent,
@@ -48,6 +49,20 @@ export const ChatWindow = () => {
       currentUser={"alice"}
       messages={messages}
       onSend={async (content) => console.log("send", content)}
+      conversationMetadata={{
+        id: "foo",
+        members: {
+          alice: {
+            id: "alice",
+            profile: { username: "Alice!" },
+          },
+          bob: {
+            id: "bob",
+            profile: { username: "Bob!" },
+          },
+        },
+        participants: [AddressFromString("alice.1")],
+      }}
     />
   );
 };

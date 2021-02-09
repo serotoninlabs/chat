@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useState, useReducer } from "react";
 import { ChatManagerContext } from "../components/ChatManager";
-import { ChatMessage } from "../services/ChatService";
+import { ChatMessage, ConversationMetadata } from "../services/ChatService";
 import { MessageWrapper } from "../services/ChatStorage";
 
 function reducer(
@@ -15,6 +15,10 @@ export function useConversation(conversationId: string) {
   const { service } = React.useContext(ChatManagerContext);
 
   const [messages, addMessages] = useReducer(reducer, []);
+  const [
+    conversationMetadata,
+    setConversationMetadata,
+  ] = useState<ConversationMetadata>();
 
   useEffect(() => {
     async function init() {
@@ -44,6 +48,9 @@ export function useConversation(conversationId: string) {
         conversationId,
         (message) => onMessageReceived(message)
       );
+      service.remote.getConversationMetadata(conversationId).then((x) => {
+        setConversationMetadata(x);
+      });
     }
 
     return () => {
@@ -56,5 +63,6 @@ export function useConversation(conversationId: string) {
     messages,
     userId: service.signal.getAddress().userId,
     send: service.send.bind(service),
+    conversationMetadata,
   };
 }

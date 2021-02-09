@@ -2,7 +2,8 @@ import { Meta } from "@storybook/react";
 import styled from "styled-components";
 import { useEffect, useMemo, useState } from "react";
 
-import { ChatManager, ManagedChatWindow } from "../ChatManager";
+import { ChatManager } from "./ChatManager";
+import { ManagedChatWindow } from "./ManagedChatWindow";
 import { DemoChatService } from "../services/DemoChatService";
 import { ChatService } from "../services/ChatService";
 
@@ -50,7 +51,7 @@ export const Demo = () => {
   return (
     <Container>
       <Panel>
-        <h1>Alice</h1>
+        <h1>Alice!</h1>
         <ChatManager service={services.alice1}>
           <ManagedChatWindow conversationId="demo" />
         </ChatManager>

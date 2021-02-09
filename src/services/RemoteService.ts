@@ -1,4 +1,5 @@
 import { EncryptedMessage, KeyPair, PreKey, PreKeyBundle } from "../types";
+import { ConversationMetadata } from "./ChatService";
 import { Address } from "./SignalService";
 
 export interface RemoteDeviceRegistration {
@@ -18,7 +19,9 @@ export interface RegistrationResult {
 }
 
 export interface RemoteService {
-  getConversationParticipants(conversationId: string): Promise<Address[]>;
+  getConversationMetadata(
+    conversationId: string
+  ): Promise<ConversationMetadata>;
   registerDevice(
     registration: RemoteDeviceRegistration
   ): Promise<RegistrationResult>;
