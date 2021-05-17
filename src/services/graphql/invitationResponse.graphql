@@ -1,0 +1,30 @@
+mutation InvitationResponse(
+  $deviceId: String!
+  $senderUserId: String!
+  $accept: Boolean!
+) {
+  signalInvitationDMResponse(
+    deviceId: $deviceId
+    requesterUserId: $senderUserId
+    accept: $accept
+  ) {
+    id
+    memberUserIds
+    invitations {
+      sender {
+        userId
+        deviceId
+      }
+      recipient {
+        userId
+        deviceId
+      }
+      ciphertext {
+        messageId
+        type
+        body
+        registrationId
+      }
+    }
+  }
+}

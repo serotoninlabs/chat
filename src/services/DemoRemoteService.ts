@@ -117,6 +117,25 @@ export class DemoRemoteService implements RemoteService {
       }
     }
   }
+  public async getUserAddresses(userId: string): Promise<Address[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  public async invitationResponse(
+    sender: Address,
+    senderUserId: string,
+    accept: boolean
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  public async invite(
+    sender: Address,
+    invitations: { recipient: Address; ciphertext: EncryptedMessage }[],
+    tags: string[]
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   subscribe(
     subscriber: Address,
     onMessage: (
@@ -187,6 +206,7 @@ export class DemoRemoteService implements RemoteService {
         carol: { id: "carol", profile: { username: "carol" } },
       },
       participants: addresses,
+      admins: [addresses[0]],
     };
   }
 

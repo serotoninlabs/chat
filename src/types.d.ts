@@ -57,6 +57,7 @@ export interface PreKeyBundle {
   };
 }
 export type EncryptedMessage = {
+  messageId: string;
   type: number;
   body: string;
   registrationId: number;

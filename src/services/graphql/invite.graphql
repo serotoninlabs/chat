@@ -1,0 +1,7 @@
+mutation Invite(
+  $deviceId: String!
+  $invitations: [SignalInvitationInput!]!
+  $tags: [String!]!
+) {
+  signalInviteDM(deviceId: $deviceId, invitations: $invitations, tags: $tags)
+}

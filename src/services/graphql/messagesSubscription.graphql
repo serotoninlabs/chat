@@ -6,6 +6,7 @@ subscription OnMessageAdded($deviceId: String!) {
       deviceId
     }
     ciphertext {
+      messageId
       body
       type
       registrationId

@@ -39,10 +39,13 @@ export abstract class StorageFactory<Schema extends DBSchema> {
     const name = `${this.namespace}/${this.databaseName}/${dbPrefix}`;
     const version = this.version;
     this.db = await openDB<Schema>(name, version, {
-      upgrade: (db) => {
-        const currentVersion = db.version;
-        if (currentVersion <= this.version) {
-          for (let i = currentVersion; i <= this.version; i++) {
+      upgrade: (db, oldVersion) => {
+        const currentVersion = oldVersion || 1;
+        console.log(
+          `update indexdb | oldVersion: ${oldVersion} currentVersion: ${currentVersion} -> ${version}`
+        );
+        if (currentVersion <= version) {
+          for (let i = currentVersion; i <= version; i++) {
             console.log("running database migration ", i);
             this.migrations[i](db);
           }

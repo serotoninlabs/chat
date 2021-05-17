@@ -31,6 +31,28 @@ export interface RemoteService {
     recipient: Address,
     message: EncryptedMessage
   ): Promise<void>;
+  getUserAddresses(userId: string): Promise<Address[]>;
+  // joinRequest(
+  //   sender: Address,
+  //   conversationId: string,
+  //   invitations: Array<{
+  //     recipient: Address;
+  //     ciphertext: EncryptedMessage;
+  //   }>
+  // ): Promise<void>;
+  invite(
+    sender: Address,
+    invitations: Array<{
+      recipient: Address;
+      ciphertext: EncryptedMessage;
+    }>,
+    tags: string[]
+  ): Promise<void>;
+  invitationResponse(
+    sender: Address,
+    senderUserId: string,
+    accept: boolean
+  ): Promise<void>;
   subscribe(
     subscriber: Address,
     onMessage: (

@@ -13,7 +13,8 @@ import {
   serializeKey,
   serializeKeyPair,
 } from "../utils";
-import { Address } from "./SignalService";
+import { SecureMessage } from "./SecureMessage";
+import { Address, RawMessage } from "./SignalService";
 import { StorageFactory } from "./StorageFactory";
 
 export interface DeviceRegistration {
@@ -47,10 +48,14 @@ interface StorageSchema extends DBSchema {
     key: string;
     value: string;
   };
+  raw_messages: {
+    key: string;
+    value: SecureMessage;
+  };
 }
 
 export class SignalStorage extends StorageFactory<StorageSchema> {
-  public version = 1;
+  public version = 2;
   public namespace = "superduper.so";
   public databaseName = "signal";
   public migrations = {
@@ -61,6 +66,9 @@ export class SignalStorage extends StorageFactory<StorageSchema> {
       db.createObjectStore("privatePreKeys");
       db.createObjectStore("signedPreKeys");
       db.createObjectStore("sessions");
+    },
+    2(db: IDBPDatabase<StorageSchema>) {
+      db.createObjectStore("raw_messages");
     },
   };
 
@@ -198,5 +206,18 @@ export class SignalStorage extends StorageFactory<StorageSchema> {
     } else {
       return Promise.resolve(false);
     }
+  }
+
+  public async getRawMessage(
+    messageId: string
+  ): Promise<SecureMessage | undefined> {
+    return this.db.get("raw_messages", messageId);
+  }
+
+  public async storeRawMessage(
+    messageId: string,
+    message: SecureMessage
+  ): Promise<void> {
+    await this.db.put("raw_messages", message, messageId);
   }
 }

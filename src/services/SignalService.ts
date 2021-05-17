@@ -1,15 +1,9 @@
 import { DeviceRegistration, SignalStorage } from "./SignalStorage";
 import { RemoteDeviceRegistration, RemoteService } from "./RemoteService";
 import ByteBuffer from "bytebuffer";
+import { v4 as uuid } from "uuid";
 
-import {
-  EncryptedMessage,
-  KeyPair,
-  PreKey,
-  SerializedKeyPair,
-  SessionCipher,
-  SignalLibrary,
-} from "../types";
+import { EncryptedMessage, SessionCipher, SignalLibrary } from "../types";
 
 import { SecureMessage } from "./SecureMessage";
 import { SignalCore } from "./SignalCore";
@@ -19,6 +13,10 @@ export type Address = {
   userId: string;
   deviceId: string;
 };
+export type RawMessage = {
+  messageId: string;
+};
+
 export function AddressToString(address: Address): string {
   return `${address.userId}.${address.deviceId}`;
 }
@@ -159,7 +157,7 @@ export class SignalService {
       ) {
         throw err;
       } else {
-        console.log("caught b ut continuing", err.message);
+        console.log("caught but continuing", err.message);
       }
     }
 
@@ -222,13 +220,25 @@ export class SignalService {
     );
     const cipher = new this.lib.SessionCipher(this.core, signalAddress);
 
-    return cipher.encrypt(ab);
+    const ciphertext = await cipher.encrypt(ab);
+    ciphertext.messageId = uuid();
+
+    return ciphertext;
   }
 
   public async decrypt(
     sender: Address,
     ciphertext: EncryptedMessage
   ): Promise<SecureMessage> {
+    if (!ciphertext.messageId || ciphertext.messageId === "") {
+      throw new Error("no message id provided");
+    }
+    // check if this message has already been decrypted
+    const raw = await this.storage.getRawMessage(ciphertext.messageId);
+    if (raw) {
+      return raw;
+    }
+
     const signalAddress = new this.lib.SignalProtocolAddress(
       sender.userId,
       sender.deviceId
@@ -267,7 +277,10 @@ export class SignalService {
       );
       plaintext = ByteBuffer.wrap(result, "binary").toUTF8();
     }
-    return JSON.parse(plaintext);
+    const message = JSON.parse(plaintext);
+
+    await this.storage.storeRawMessage(ciphertext.messageId, message);
+    return message;
   }
 
   // // this is not part of the signal.storage interface so we can change this

@@ -1,0 +1,6 @@
+query UserAddresses($userId: String!) {
+  signalUserAddresses(userId: $userId) {
+    userId
+    deviceId
+  }
+}

@@ -32,6 +32,15 @@ import {
   SendMessageMutationVariables,
   RemovePreKeyMutationVariables,
   Conversation,
+  InvitationResponseDocument,
+  InvitationResponseMutation,
+  InvitationResponseMutationVariables,
+  InviteDocument,
+  InviteMutation,
+  InviteMutationVariables,
+  UserAddressesQuery,
+  UserAddressesDocument,
+  UserAddressesQueryVariables,
 } from "./graphql/generated";
 import {
   RegistrationResult,
@@ -46,6 +55,23 @@ export class GraphqlRemoteService implements RemoteService {
 
   constructor(graphql: ApolloClient<NormalizedCacheObject>) {
     this.graphql = graphql;
+  }
+  public async getUserAddresses(userId: string): Promise<Address[]> {
+    const result = await this.graphql.query<
+      UserAddressesQuery,
+      UserAddressesQueryVariables
+    >({
+      query: UserAddressesDocument,
+      variables: {
+        userId,
+      },
+    });
+
+    if (result.errors) {
+      console.log("graphql error", result.errors);
+      throw new Error(result.errors[0].message);
+    }
+    return result.data.signalUserAddresses;
   }
 
   public subscribe(
@@ -169,6 +195,45 @@ export class GraphqlRemoteService implements RemoteService {
     console.log("sending message mutation success", result);
   }
 
+  public async invite(
+    sender: Address,
+    invitations: { recipient: Address; ciphertext: EncryptedMessage }[],
+    tags: string[]
+  ): Promise<void> {
+    console.log("sending joinRequest", sender, invitations);
+    const result = await this.graphql.mutate<
+      InviteMutation,
+      InviteMutationVariables
+    >({
+      mutation: InviteDocument,
+      variables: {
+        deviceId: sender.deviceId,
+        invitations,
+        tags,
+      },
+    });
+    console.log("sending message mutation success", result);
+  }
+  public async invitationResponse(
+    sender: Address,
+    senderUserId: string,
+    accept: boolean
+  ): Promise<void> {
+    console.log("sending joinRequest", sender, senderUserId, accept);
+    const result = await this.graphql.mutate<
+      InviteMutation,
+      InvitationResponseMutationVariables
+    >({
+      mutation: InvitationResponseDocument,
+      variables: {
+        deviceId: sender.deviceId,
+        senderUserId,
+        accept,
+      },
+    });
+    console.log("invitationResponse mutation success", result);
+  }
+
   public async getConversationMetadata(
     conversationId: string
   ): Promise<ConversationMetadata> {
@@ -193,10 +258,15 @@ export class GraphqlRemoteService implements RemoteService {
       members[member.id] = member;
     }
 
+    const admins = result.data.conversation.participants.filter((address) => {
+      return result.data.conversation.adminUserIds.indexOf(address.userId) > -1;
+    });
+
     return {
       id: result.data.conversation.id,
       members: members,
       participants: result.data.conversation.participants,
+      admins,
     };
   }
 
